@@ -266,6 +266,50 @@ var shadowrunDice = function (message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
+var oneRingDice = function (message) {
+	var dice = message.match(/([0-9]+)r/);
+	var shadow = message.match(/s/);
+	var result;
+	var builder = '';
+	var total = 0;
+	var success = false;
+	if (dice) {
+		dice = parseInt(dice[1], 10);
+	}
+	result = Math.floor(Math.random() * 12);
+	if (result === 0) {
+		builder += '⌽';
+		if (shadow) {
+			total += 12;
+			success = true;
+		}
+	} else if (result === 11) {
+		builder += 'ᚠ';
+		if (!shadow) {
+			total += 12;
+			success = true;
+		}
+	} else {
+		builder += result.toString();
+		total += result;
+	}
+	while (dice > 0) {
+		builder += ',';
+		result = Math.floor(Math.random() * 6) + 1;
+
+		total += result;
+		if (result <= 3) {
+			builder += '*' + result + '*';
+		} else if (result === 6) {
+			builder += '**' + result + '**';
+		} else {
+			builder += result.toString();
+		}
+		dice -= 1;
+	}
+	return builder + '\n' + '**TOTAL: ' + (function () {if (success) { return ' AUTOMATIC SUCCESS';} else return total;})() + '**';
+};
+
 var l5rDice = function (message) {
 	var dice = message.match(/([0-9]+)k/);
 	var keep = message.match(/k([0-9]+)/);
@@ -668,8 +712,6 @@ var initiativeHandler = function (message) {
 		sendMessage(output);
 	};
 	try {
-		console.log(command);
-		console.log(parts);
 		switch (command) {
 			case 'reset':
 				reset();
@@ -733,22 +775,18 @@ mybot.on('message', function(message) {
 	} else if (activeChannels.indexOf(message.channel.id) > -1) {
 		if (msg) {
 			if (msg[1].match(/^[0-9]+?e/)) {
-				console.log('exalted');
 				result = exaltedDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?w/)) {
-				console.log('wod');
 				result = wodDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?d/)) {
-				console.log('base');
 				result = baseDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?s/)) {
-				console.log('shadowrun');
 				result = shadowrunDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?k/)) {
-				console.log('l5r');
 				result = l5rDice(msg[1]);
+			} else if (msg[1].match(/^[0-9]+?r/)) {
+				result = oneRingDice(msg[1]);
 			} else if (msg[1] === 'fudge') {
-				console.log('fudge');
 				result = fudgeDice();
 			}
 			if (result) {
@@ -761,7 +799,7 @@ mybot.on('message', function(message) {
 });
 
 mybot.login(config.email,config.password);
-}
+};
 
 if (config.email === 'YOUR EMAIL') {
 	var pw=true;
