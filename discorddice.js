@@ -269,12 +269,18 @@ var shadowrunDice = function (message) {
 var oneRingDice = function (message) {
 	var dice = message.match(/([0-9]+)r/);
 	var shadow = message.match(/s/);
+	var auto = message.match(/(\+|-)([0-9]+)/);
 	var result;
 	var builder = '';
 	var total = 0;
 	var success = false;
 	if (dice) {
 		dice = parseInt(dice[1], 10);
+	}
+	if (auto) {
+		auto = parseInt(auto[0], 10);
+	} else {
+		auto = 0;
 	}
 	result = Math.floor(Math.random() * 12);
 	if (result === 0) {
@@ -307,6 +313,7 @@ var oneRingDice = function (message) {
 		}
 		dice -= 1;
 	}
+	total += auto;
 	return builder + '\n' + '**TOTAL: ' + (function () {if (success) { return ' AUTOMATIC SUCCESS';} else return total;})() + '**';
 };
 
