@@ -9,6 +9,27 @@ var forward = [];
 var output = '';
 var currentActors = [];
 var activeChannels = '';
+var fateMasterDeck = [-4,-3,-2,-3,-2,-1,-2,-1,0,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,0,1,2,1,2,3,2,3,4];
+var fateDeck = [];
+
+var shuffle = function (array) {
+	var currentIndex = array.length, temporaryValue, randomIndex;
+
+	// While there remain elements to shuffle...
+	while (0 !== currentIndex) {
+
+		// Pick a remaining element...
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex -= 1;
+
+		// And swap it with the current element.
+		temporaryValue = array[currentIndex];
+		array[currentIndex] = array[randomIndex];
+		array[randomIndex] = temporaryValue;
+	}
+
+	return array;
+};
 
 var exaltedDice = function (message) {
 	var dice = message.match(/([0-9]+)e/);
@@ -218,6 +239,38 @@ var fudgeDice = function () {
 	return builder + '\n' + '**TOTAL: ' + total + '**';
 };
 
+var fateCards = function (message) {
+	if (fateDeck.length === 0) {
+		fateDeck = fateMasterDeck.slice(0);
+		shuffle(fateDeck);
+		mybot.reply(message, 'Fate Deck Shuffled');
+	}
+	return fateDeck.pop() + ', ' + fateDeck.length + ' cards remaining';
+};
+
+var fateCount = function () {
+	var counts = {
+		'-4':0,
+		'-3':0,
+		'-2':0,
+		'-1':0,
+		'0':0,
+		'1':0,
+		'2':0,
+		'3':0,
+		'4':0
+	},
+		avg = 0,
+		count = 0;
+	fateDeck.forEach(function(result) {
+		counts[result]+=1;
+		avg+=result;
+		count++;
+	});
+	counts.average=(avg/count);
+	return JSON.stringify(counts);
+};
+
 var shadowrunDice = function (message) {
 	var dice = message.match(/([0-9]+)s/);
 	var edge = message.match(/e/);
@@ -420,63 +473,6 @@ var initiativeHandler = function (message) {
 			return parseInt(str,10);
 		}
 	};
-	//var duel = function () {
-	//	var playera = parts[1];
-	//	var playerb = parts[2];
-	//	var aresult;
-	//	var bresult;
-	//	var name = 'Duel';
-	//	sendMessage('Starting a duel between ' + playera + ' and ' + playerb, name);
-	//	sendMessage('Each participant, roll Iaijutsu (Assessment) / Awareness vs TN 10+ opponent’s Insight Rank x 5. Success grants one piece of information, plus one per raise declared. If you beat your opponent’s roll by 10 or more, whether or not it gained any information, you gain +1k1 on your Focus Roll.', name);
-	//	duelStep = function (invoker, label, result) {
-	//		var message = '';
-	//		if (invoker === playera || label.indexOf(playera) > -1) {
-	//			console.log('Aresult set');
-	//			aresult = result;
-	//		}
-	//		if (invoker === playerb || label.indexOf(playerb) > -1) {
-	//			console.log('Bresult set');
-	//			bresult = result;
-	//		}
-	//		if (aresult && bresult) {
-	//			if (aresult >= (bresult + 10)) {
-	//				message = playera + ' won by at least 10, so gains 1k1 to the next step.';
-	//			} else if (bresult >= (aresult + 10)) {
-	//				message = playerb + ' won by at least 10, so gains 1k1 to the next step.';
-	//			}
-	//			sendMessage(message, name);
-	//			sendMessage('Each participant, make a contested Iaijutsu (Focus) / Void roll. If you win by 5 or more you strike first, for every 5 you beat your opponent you gain one free raise on the strike roll. If nobody wins by at least 5, it is a kharmic strike and both attack at once.', name);
-	//			aresult = 0;
-	//			bresult = 0;
-	//			duelStep = function (invoker, label, result) {
-	//				var message = '';
-	//				if (invoker === playera || label.indexOf(playera) > -1) {
-	//					aresult = result;
-	//				}
-	//				if (invoker === playerb || label.indexOf(playerb) > -1) {
-	//					bresult = result;
-	//				}
-	//				if (aresult && bresult) {
-	//					if (aresult >= (bresult + 5)) {
-	//						message = playera + ' won by at least 5, so strikes first.';
-	//						if (aresult - (bresult + 5) >= 5) {
-	//							message += ' They also receive ' + Math.floor((aresult - (bresult + 5)) / 5) + ' free raises on the attack.';
-	//						}
-	//					} else if (bresult >= (aresult + 5)) {
-	//						message = playerb + ' won by at least 5, so strikes first.';
-	//						if (bresult - (aresult + 5) >= 5) {
-	//							message += ' They also receive ' + Math.floor((bresult - (aresult + 5)) / 5) + ' free raises on the attack.';
-	//						}
-	//					} else {
-	//						message = 'KHARMIC STRIKE!';
-	//					}
-	//					sendMessage(message,name);
-	//					duelStep = undefined;
-	//				}
-	//			}
-	//		}
-	//	};
-	//};
 	var reset = function () {
 		var oldTracker = JSON.parse(JSON.stringify(tracker));
 		tracker = {};
@@ -795,6 +791,14 @@ mybot.on('message', function(message) {
 				result = oneRingDice(msg[1]);
 			} else if (msg[1] === 'fudge') {
 				result = fudgeDice();
+			} else if (msg[1] === 'fdraw') {
+				result = fateCards(message);
+			} else if (msg[1] === 'fshuffle') {
+				fateDeck = fateMasterDeck.slice(0);
+				shuffle(fateDeck);
+				result = 'Fate Deck Shuffled';
+			} else if (msg[1] === 'fcount') {
+				result = fateCount();
 			}
 			if (result) {
 				mybot.reply(message, result);
