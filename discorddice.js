@@ -337,7 +337,7 @@ var oneRingDice = function (message) {
 	}
 	result = Math.floor(Math.random() * 12);
 	if (result === 0) {
-		builder += '⌽';
+		builder += 'ভ';
 		if (shadow) {
 			total += 12;
 			success = true;
