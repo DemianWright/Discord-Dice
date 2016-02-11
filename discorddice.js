@@ -1,8 +1,9 @@
 var Discord = require('discord.js');
+var fs = require('fs');
 
 var mybot = new Discord.Client();
 
-var config = require('./config.json').discord;
+var config;
 var tracker = {};
 var back = [];
 var forward = [];
@@ -812,11 +813,16 @@ mybot.on('message', function(message) {
 mybot.login(config.email,config.password);
 };
 
+if (!fs.existsSync('./config.json')) {
+	fs.writeFileSync('./config.json', JSON.stringify({discord:{email:'YOUR EMAIL', password:'YOUR PASSWORD'}}).replace(/\r?\n|\r/g,''));
+}
+
+config = require('./config.json').discord;
+
 if (config.email === 'YOUR EMAIL') {
 	var pw=true;
 	process.stdin.resume();
 	process.stdin.setEncoding('utf8');
-	var fs = require('fs');
 	console.log('Enter your Discord Email Login: ');
 	process.stdin.on('data', function (email) {
 		if (pw) {
