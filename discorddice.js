@@ -769,7 +769,7 @@ var mainProcess = function () {
 
 mybot.on('message', function(message) {
 	var result;
-	var msg = message.content.match(/\((.+)\)/);
+	var cmd = message.content.match(/\((.+)\)/) || message.content.match(/\/roll (.+)/);
 	if (message.content === '!startDice') {
 		if (activeChannels.indexOf(message.channel.id) === -1) {
 			activeChannels+=message.channel.id;
