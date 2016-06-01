@@ -10,6 +10,7 @@ var forward = [];
 var output = '';
 var currentActors = [];
 var activeChannels = '';
+var boldOnes = '';
 var fateMasterDeck = [-4,-3,-2,-3,-2,-1,-2,-1,0,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,0,1,2,1,2,3,2,3,4];
 var fateDeck = [];
 
@@ -101,7 +102,7 @@ var exaltedDice = function (message) {
 			successes += 1;
 		}
 		if (result === 1) {
-			builder += result;
+			builder += boldOnes + result + boldOnes;
 		} else if (result >= double) {
 			builder += '**' + result + '**';
 		} else if (result >= target) {
@@ -154,7 +155,7 @@ var wodDice = function (message) {
 			sucDice += 1;
 		}
 		if (result === 1) {
-			builder += result;
+			builder += boldOnes + result + boldOnes;
 		} else if (result >= again) {
 			builder += '**' + result + '**';
 		} else  if (result >= 8) {
@@ -195,7 +196,7 @@ var baseDice = function (message) {
 			result = diceSize;
 		}
 		if (result === 1) {
-			builder += result;
+			builder += boldOnes + result + boldOnes;
 		} else if (result === diceSize) {
 			builder += '**' + result + '**';
 		} else {
@@ -303,7 +304,7 @@ var shadowrunDice = function (message) {
 			sucDice += 1;
 		}
 		if (result === 1) {
-			builder += result;
+			builder += boldOnes + result + boldOnes;
 		} else if (result >= 6) {
 			builder += '**' + result + '**';
 		} else  if (result >= 5) {
@@ -776,7 +777,13 @@ mybot.on('message', function(message) {
 		}
 	} else if (message.content === '!stopDice') {
 		activeChannels = activeChannels.replace(message.channel.id,'');
-	} else if (activeChannels.indexOf(message.channel.id) > -1) {
+	} else if (message.content === '!boldOnes') {
+		if (boldOnes === '') {
+			boldOnes = '***';
+		} else {
+			boldOnes = '';
+		}
+	}else if (activeChannels.indexOf(message.channel.id) > -1) {
 		if (msg) {
 			if (msg[1].match(/^[0-9]+?e/)) {
 				result = exaltedDice(msg[1]);
