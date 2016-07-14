@@ -11,10 +11,10 @@ var output = '';
 var currentActors = [];
 var activeChannels = '';
 var boldOnes = '';
-var fateMasterDeck = [-4,-3,-2,-3,-2,-1,-2,-1,0,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-3,-2,-1,-2,-1,0,-1,0,1,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,-2,-1,0,-1,0,1,0,1,2,-1,0,1,0,1,2,1,2,3,0,1,2,1,2,3,2,3,4];
+var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
 
-var shuffle = function (array) {
+var shuffle = function(array) {
 	var currentIndex = array.length, temporaryValue, randomIndex;
 
 	// While there remain elements to shuffle...
@@ -33,7 +33,7 @@ var shuffle = function (array) {
 	return array;
 };
 
-var exaltedDice = function (message) {
+var exaltedDice = function(message) {
 	var dice = message.match(/([0-9]+)e/);
 	var double = message.match(/[ed]([0-9]+)/);
 	var reroll = message.match(/r([0-9]+)/);
@@ -119,7 +119,7 @@ var exaltedDice = function (message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
-var wodDice = function (message) {
+var wodDice = function(message) {
 	var dice = message.match(/([0-9]+)w/);
 	var again = message.match(/w([0-9]+)/);
 	var auto = message.match(/(\+|-)([0-9]+)/);
@@ -158,7 +158,7 @@ var wodDice = function (message) {
 			builder += boldOnes + result + boldOnes;
 		} else if (result >= again) {
 			builder += '**' + result + '**';
-		} else  if (result >= 8) {
+		} else if (result >= 8) {
 			builder += '*' + result + '*';
 		} else {
 			builder += result;
@@ -172,7 +172,7 @@ var wodDice = function (message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
-var baseDice = function (message) {
+var baseDice = function(message) {
 	var dice = message.match(/([0-9]+)d([0-9]+)/);
 	var auto = message.match(/(\+|-)([0-9]+)/);
 	var diceSize;
@@ -190,7 +190,8 @@ var baseDice = function (message) {
 		auto = parseInt(auto[0], 10);
 	} else {
 		auto = 0;
-	}while (dice > 0) {
+	}
+	while (dice > 0) {
 		result = Math.floor(Math.random() * diceSize);
 		if (result === 0) {
 			result = diceSize;
@@ -212,7 +213,7 @@ var baseDice = function (message) {
 	return builder + '\n' + '**TOTAL: ' + total + '**';
 };
 
-var fudgeDice = function () {
+var fudgeDice = function() {
 	var dice = 4;
 	var diceSize = 3;
 	var total = 0;
@@ -223,16 +224,16 @@ var fudgeDice = function () {
 		result = Math.floor(Math.random() * diceSize);
 		switch (result) {
 			case 0:
-				builder+='-';
+				builder += '-';
 				break;
 			case 1:
-				builder+=' ';
+				builder += ' ';
 				break;
 			case 2:
-				builder+='+';
+				builder += '+';
 				break;
 		}
-		total += (result-1);
+		total += (result - 1);
 		dice -= 1;
 		if (dice > 0) {
 			builder += ',';
@@ -241,7 +242,7 @@ var fudgeDice = function () {
 	return builder + '\n' + '**TOTAL: ' + total + '**';
 };
 
-var fateCards = function (message) {
+var fateCards = function(message) {
 	if (fateDeck.length === 0) {
 		fateDeck = fateMasterDeck.slice(0);
 		shuffle(fateDeck);
@@ -250,30 +251,28 @@ var fateCards = function (message) {
 	return fateDeck.pop() + ', ' + fateDeck.length + ' cards remaining';
 };
 
-var fateCount = function () {
+var fateCount = function() {
 	var counts = {
-		'-4':0,
-		'-3':0,
-		'-2':0,
-		'-1':0,
-		'0':0,
-		'1':0,
-		'2':0,
-		'3':0,
-		'4':0
-	},
-		avg = 0,
-		count = 0;
+		'-4' : 0,
+		'-3' : 0,
+		'-2' : 0,
+		'-1' : 0,
+		'0' : 0,
+		'1' : 0,
+		'2' : 0,
+		'3' : 0,
+		'4' : 0
+	}, avg = 0, count = 0;
 	fateDeck.forEach(function(result) {
-		counts[result]+=1;
-		avg+=result;
+		counts[result] += 1;
+		avg += result;
 		count++;
 	});
-	counts.average=(avg/count);
+	counts.average = (avg / count);
 	return JSON.stringify(counts);
 };
 
-var shadowrunDice = function (message) {
+var shadowrunDice = function(message) {
 	var dice = message.match(/([0-9]+)s/);
 	var edge = message.match(/e/);
 	var auto = message.match(/(\+|-)([0-9]+)/);
@@ -307,7 +306,7 @@ var shadowrunDice = function (message) {
 			builder += boldOnes + result + boldOnes;
 		} else if (result >= 6) {
 			builder += '**' + result + '**';
-		} else  if (result >= 5) {
+		} else if (result >= 5) {
 			builder += '*' + result + '*';
 		} else {
 			builder += result;
@@ -321,7 +320,7 @@ var shadowrunDice = function (message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
-var oneRingDice = function (message) {
+var oneRingDice = function(message) {
 	var dice = message.match(/([0-9]+)r/);
 	var shadow = message.match(/s/);
 	var auto = message.match(/(\+|-)([0-9]+)/);
@@ -369,10 +368,15 @@ var oneRingDice = function (message) {
 		dice -= 1;
 	}
 	total += auto;
-	return builder + '\n' + '**TOTAL: ' + (function () {if (success) { return ' AUTOMATIC SUCCESS';} else return total;})() + '**';
+	return builder + '\n' + '**TOTAL: ' + (function() {
+		if (success) {
+			return ' AUTOMATIC SUCCESS';
+		} else
+			return total;
+	})() + '**';
 };
 
-var l5rDice = function (message) {
+var l5rDice = function(message) {
 	var dice = message.match(/([0-9]+)k/);
 	var keep = message.match(/k([0-9]+)/);
 	var explode = message.match(/e([0-9]+)/);
@@ -431,7 +435,7 @@ var l5rDice = function (message) {
 	while (keep > 0) {
 		highest = 0;
 		highIndex = 0;
-		results.forEach(function (res, index) {
+		results.forEach(function(res, index) {
 			if (res > highest) {
 				highest = res;
 				highIndex = index;
@@ -449,37 +453,37 @@ var l5rDice = function (message) {
 	return builder + '\n' + '**TOTAL: ' + final + '**';
 };
 
-var initiativeHandler = function (message) {
+var initiativeHandler = function(message) {
 	var raw = message.content.substr(1);
 	var parts = raw.split(' ');
 	var command = parts[0];
 	var highest = -9999999;
 	if (parts[1]) {
 		if (parts[1].toLowerCase() === 'me' || parts[1].toLowerCase() === 'my') {
-			parts[1] = message.author.username.replace(/ /g,'');
+			parts[1] = message.author.username.replace(/ /g, '');
 		}
 	}
 	if (parts[2]) {
 		if (parts[2].toLowerCase() === 'me' || parts[2].toLowerCase() === 'my') {
-			parts[2] = message.author.username.replace(/ /g,'');
+			parts[2] = message.author.username.replace(/ /g, '');
 		}
 	}
-	var sendMessage = function (msg) {
-		mybot.reply(message,msg);
+	var sendMessage = function(msg) {
+		mybot.reply(message, msg);
 	};
-	var decodeInitiative = function (str) {
-		if (parseInt(str,10).toString() !== 'NaN') {
-			return parseInt(str,10);
+	var decodeInitiative = function(str) {
+		if (parseInt(str, 10).toString() !== 'NaN') {
+			return parseInt(str, 10);
 		} else {
-			str = str.replace(/\**/g,'').replace(/\*/g,'');
-			return parseInt(str,10);
+			str = str.replace(/\**/g, '').replace(/\*/g, '');
+			return parseInt(str, 10);
 		}
 	};
-	var reset = function () {
+	var reset = function() {
 		var oldTracker = JSON.parse(JSON.stringify(tracker));
 		tracker = {};
-		back.push(function (un) {
-			if (un==='undo') {
+		back.push(function(un) {
+			if (un === 'undo') {
 				tracker = oldTracker;
 				sendMessage('Undoing reset');
 			} else {
@@ -488,10 +492,10 @@ var initiativeHandler = function (message) {
 			}
 		});
 	};
-	var next = function () {
+	var next = function() {
 		var active = [];
 		var oldActors = [];
-		Object.keys(tracker).forEach(function (actor) {
+		Object.keys(tracker).forEach(function(actor) {
 			actor = tracker[actor];
 			if (!actor.acted) {
 				if (actor.initiative > highest) {
@@ -507,28 +511,28 @@ var initiativeHandler = function (message) {
 		if (active.length > 0) {
 			currentActors = active;
 			output = highest + ':';
-			active.forEach(function (actor) {
+			active.forEach(function(actor) {
 				actor.acted = true;
-				actor.motes = Math.min(actor.motes+5,actor.maxmotes);
+				actor.motes = Math.min(actor.motes + 5, actor.maxmotes);
 				output += ' ' + actor.name;
 				if (actor.maxmotes > 0) {
-					output += '('  + actor.motes + '/' + actor.maxmotes + ')';
+					output += '(' + actor.motes + '/' + actor.maxmotes + ')';
 				}
 				output += ',';
 			});
 			output = output.replace(/,$/, '');
 			sendMessage(output);
-			back.push(function (un) {
+			back.push(function(un) {
 				if (un === 'undo') {
-					active.forEach(function (actor, index) {
+					active.forEach(function(actor, index) {
 						actor.acted = false;
 						actor.motes = oldActors[index].motes;
 					});
 					sendMessage('Undoing next turn');
 				} else {
-					active.forEach(function (actor) {
+					active.forEach(function(actor) {
 						actor.acted = true;
-						actor.motes = Math.min(actor.motes+5,actor.maxmotes);
+						actor.motes = Math.min(actor.motes + 5, actor.maxmotes);
 					});
 					sendMessage('Redoing next turn');
 				}
@@ -536,20 +540,20 @@ var initiativeHandler = function (message) {
 		} else {
 			sendMessage('NEW TURN');
 			currentActors = [];
-			Object.keys(tracker).forEach(function (actorId) {
+			Object.keys(tracker).forEach(function(actorId) {
 				var actor = tracker[actorId];
 				actor.acted = false;
 			});
 			list();
-			back.push(function (un) {
+			back.push(function(un) {
 				if (un === 'undo') {
-					Object.keys(tracker).forEach(function (actorId) {
+					Object.keys(tracker).forEach(function(actorId) {
 						var actor = tracker[actorId];
 						actor.acted = true;
 					});
 					sendMessage('Undoing New Turn');
 				} else {
-					Object.keys(tracker).forEach(function (actorId) {
+					Object.keys(tracker).forEach(function(actorId) {
 						var actor = tracker[actorId];
 						actor.acted = false;
 					});
@@ -560,17 +564,17 @@ var initiativeHandler = function (message) {
 			});
 		}
 	};
-	var add = function () {
+	var add = function() {
 		var name = parts[1];
 		var actor = {
-			name: name,
-			initiative: parseInt(parts[2], 10) || 0,
-			motes: parseInt(parts[3], 10) || 0,
-			maxmotes: parseInt(parts[3], 10) || 0,
-			acted: false
+			name : name,
+			initiative : parseInt(parts[2], 10) || 0,
+			motes : parseInt(parts[3], 10) || 0,
+			maxmotes : parseInt(parts[3], 10) || 0,
+			acted : false
 		};
 		tracker[name] = actor;
-		back.push(function (un) {
+		back.push(function(un) {
 			if (un === 'undo') {
 				delete tracker[name];
 				sendMessage('Deleting ' + name);
@@ -580,12 +584,12 @@ var initiativeHandler = function (message) {
 			}
 		});
 	};
-	var remove = function () {
+	var remove = function() {
 		var actor = tracker[parts[1]];
 		var name = actor.name;
 		if (!!actor) {
 			delete tracker[name];
-			back.push(function (un) {
+			back.push(function(un) {
 				if (un === 'undo') {
 					tracker[name] = actor;
 					sendMessage('Re-adding ' + name);
@@ -596,14 +600,13 @@ var initiativeHandler = function (message) {
 			});
 		}
 	};
-	var list = function () {
-		var output = [],
-			toPrint = '';
-		Object.keys(tracker).forEach(function (name) {
+	var list = function() {
+		var output = [], toPrint = '';
+		Object.keys(tracker).forEach(function(name) {
 			var actor = tracker[name];
 			var data = '';
 			var isActive = false;
-			currentActors.forEach(function(act){
+			currentActors.forEach(function(act) {
 				if (act.name === actor.name) {
 					isActive = true;
 				}
@@ -615,7 +618,7 @@ var initiativeHandler = function (message) {
 			}
 			data += actor.initiative + ' ' + name;
 			if (actor.maxmotes > 0) {
-				data += '('  + actor.motes + '/' + actor.maxmotes + ')';
+				data += '(' + actor.motes + '/' + actor.maxmotes + ')';
 			}
 			if (isActive) {
 				data += '**';
@@ -624,20 +627,22 @@ var initiativeHandler = function (message) {
 			}
 			output.push(data);
 		});
-		output.sort(function (a, b) { return decodeInitiative(b.split(' ')[0]) - decodeInitiative(a.split(' ')[0]) });
-		output.forEach(function (val) {
+		output.sort(function(a, b) {
+			return decodeInitiative(b.split(' ')[0]) - decodeInitiative(a.split(' ')[0])
+		});
+		output.forEach(function(val) {
 			toPrint += val + '\n';
 		});
 		sendMessage('\n' + toPrint.replace(/\n$/, ''));
 	};
-	var set = function () {
+	var set = function() {
 		var trait = parts[2].toLowerCase() === 'init' ? 'initiative' : parts[2].toLowerCase();
 		var oldValue = tracker[parts[1]][trait];
 		var newValue = parseInt(parts[3], 10);
 		var name = parts[1];
 		tracker[name][trait] = newValue;
-		back.push(function (un) {
-			if (un==='undo') {
+		back.push(function(un) {
+			if (un === 'undo') {
 				tracker[name][trait] = oldValue;
 				sendMessage('Reset ' + name + '\'s ' + trait + ' to ' + oldValue);
 			} else {
@@ -646,14 +651,14 @@ var initiativeHandler = function (message) {
 			}
 		});
 	};
-	var modify = function () {
+	var modify = function() {
 		var trait = parts[2].toLowerCase() === 'init' ? 'initiative' : parts[2].toLowerCase();
 		var oldValue = tracker[parts[1]][trait];
 		var newValue = oldValue + parseInt(parts[3], 10);
 		var name = parts[1];
 		tracker[name][trait] = newValue;
-		back.push(function (un) {
-			if (un==='undo') {
+		back.push(function(un) {
+			if (un === 'undo') {
 				tracker[name][trait] = oldValue;
 				sendMessage('Reset ' + name + '\'s ' + trait + ' to ' + oldValue);
 			} else {
@@ -662,7 +667,7 @@ var initiativeHandler = function (message) {
 			}
 		});
 	};
-	var withering = function () {
+	var withering = function() {
 		var aName = parts[1];
 		var dName = parts[2];
 		var attackerOldValue = tracker[aName].initiative;
@@ -675,8 +680,8 @@ var initiativeHandler = function (message) {
 		}
 		tracker[aName].initiative = attackerNewValue;
 		tracker[dName].initiative = defenderNewValue;
-		back.push(function (un) {
-			if (un==='undo') {
+		back.push(function(un) {
+			if (un === 'undo') {
 				tracker[aName].initiative = attackerOldValue;
 				tracker[dName].initiative = defenderOldValue;
 				sendMessage('Undoing withering attack');
@@ -707,12 +712,12 @@ var initiativeHandler = function (message) {
 			sendMessage('Nothing to Redo');
 		}
 	};
-	var check = function () {
+	var check = function() {
 		var name = parts[1];
-		var output = tracker[name].initiative + ' ' + name + '('  + tracker[name].motes + '/' + tracker[name].maxmotes + ')';
+		var output = tracker[name].initiative + ' ' + name + '(' + tracker[name].motes + '/' + tracker[name].maxmotes + ')';
 		sendMessage(output);
 	};
-	var help = function () {
+	var help = function() {
 		var output = '\nreset\nnext\nadd NAME [INITIATIVE] [MAXMOTES]\nlist\ncheck NAME\nset NAME TRAIT VALUE\nmodify NAME TRAIT AMOUNT\nwithering ATTACKER DEFENDER AMOUNT\ndelete NAME\nundo\nredo\nhelp';
 		sendMessage(output);
 	};
@@ -756,7 +761,7 @@ var initiativeHandler = function (message) {
 				help();
 				break;
 			case 'duel':
-				//duel();
+				// duel();
 				break;
 			case 'default':
 				sendMessage('Not Recognized Command');
@@ -766,82 +771,90 @@ var initiativeHandler = function (message) {
 	}
 };
 
-var mainProcess = function () {
+var mainProcess = function() {
 
-mybot.on('message', function(message) {
-	var result;
-	var msg = message.content.match(/\((.+)\)/) || message.content.match(/\/roll (.+)/);
-	if (message.content === '!startDice') {
-		if (activeChannels.indexOf(message.channel.id) === -1) {
-			activeChannels+=message.channel.id;
-		}
-	} else if (message.content === '!stopDice') {
-		activeChannels = activeChannels.replace(message.channel.id,'');
-	} else if (message.content === '!boldOnes') {
-		if (boldOnes === '') {
-			boldOnes = '***';
-		} else {
-			boldOnes = '';
-		}
-	}else if (activeChannels.indexOf(message.channel.id) > -1) {
-		if (msg) {
-			if (msg[1].match(/^[0-9]+?e/)) {
-				result = exaltedDice(msg[1]);
-			} else if (msg[1].match(/^[0-9]+?w/)) {
-				result = wodDice(msg[1]);
-			} else if (msg[1].match(/^[0-9]+?d/)) {
-				result = baseDice(msg[1]);
-			} else if (msg[1].match(/^[0-9]+?s/)) {
-				result = shadowrunDice(msg[1]);
-			} else if (msg[1].match(/^[0-9]+?k/)) {
-				result = l5rDice(msg[1]);
-			} else if (msg[1].match(/^[0-9]+?r/)) {
-				result = oneRingDice(msg[1]);
-			} else if (msg[1] === 'fudge') {
-				result = fudgeDice();
-			} else if (msg[1] === 'fdraw') {
-				result = fateCards(message);
-			} else if (msg[1] === 'fshuffle') {
-				fateDeck = fateMasterDeck.slice(0);
-				shuffle(fateDeck);
-				result = 'Fate Deck Shuffled';
-			} else if (msg[1] === 'fcount') {
-				result = fateCount();
+	mybot.on('message', function(message) {
+		var result;
+		var msg = message.content.match(/\((.+)\)/) || message.content.match(/\/roll (.+)/);
+		if (message.content === '!startDice') {
+			if (activeChannels.indexOf(message.channel.id) === -1) {
+				activeChannels += message.channel.id;
 			}
-			if (result) {
-				mybot.reply(message, result);
+		} else if (message.content === '!stopDice') {
+			activeChannels = activeChannels.replace(message.channel.id, '');
+		} else if (message.content === '!boldOnes') {
+			if (boldOnes === '') {
+				boldOnes = '***';
+			} else {
+				boldOnes = '';
 			}
-		} else if (message.content.match(/^!/)) {
-			initiativeHandler(message);
+		} else if (activeChannels.indexOf(message.channel.id) > -1) {
+			if (msg) {
+				if (msg[1].match(/^[0-9]+?e/)) {
+					result = exaltedDice(msg[1]);
+				} else if (msg[1].match(/^[0-9]+?w/)) {
+					result = wodDice(msg[1]);
+				} else if (msg[1].match(/^[0-9]+?d/)) {
+					result = baseDice(msg[1]);
+				} else if (msg[1].match(/^[0-9]+?s/)) {
+					result = shadowrunDice(msg[1]);
+				} else if (msg[1].match(/^[0-9]+?k/)) {
+					result = l5rDice(msg[1]);
+				} else if (msg[1].match(/^[0-9]+?r/)) {
+					result = oneRingDice(msg[1]);
+				} else if (msg[1] === 'fudge') {
+					result = fudgeDice();
+				} else if (msg[1] === 'fdraw') {
+					result = fateCards(message);
+				} else if (msg[1] === 'fshuffle') {
+					fateDeck = fateMasterDeck.slice(0);
+					shuffle(fateDeck);
+					result = 'Fate Deck Shuffled';
+				} else if (msg[1] === 'fcount') {
+					result = fateCount();
+				}
+				if (result) {
+					mybot.reply(message, result);
+				}
+			} else if (message.content.match(/^!/)) {
+				initiativeHandler(message);
+			}
 		}
-	}
-});
+	});
 
-mybot.login(config.email,config.password);
+	mybot.login(config.email, config.password);
 };
 
 if (!fs.existsSync('./config.json')) {
-	fs.writeFileSync('./config.json', JSON.stringify({discord:{email:'YOUR EMAIL', password:'YOUR PASSWORD'}}).replace(/\r?\n|\r/g,''));
+	fs.writeFileSync('./config.json', JSON.stringify({
+		discord : {
+			email : 'YOUR EMAIL',
+			password : 'YOUR PASSWORD'
+		}
+	}).replace(/\r?\n|\r/g, ''));
 }
 
 config = require('./config.json').discord;
 
 if (config.email === 'YOUR EMAIL') {
-	var pw=true;
+	var pw = true;
 	process.stdin.resume();
 	process.stdin.setEncoding('utf8');
 	console.log('Enter your Discord Email Login: ');
-	process.stdin.on('data', function (email) {
+	process.stdin.on('data', function(email) {
 		if (pw) {
 			pw = false;
 			console.log('Enter your Discord Password: ');
 		}
-		process.stdin.on('data', function (password) {
-			process.stdin.on('data', function (){});
+		process.stdin.on('data', function(password) {
+			process.stdin.on('data', function() {
+			});
 			process.stdin.pause();
-			config.email = email.replace(/\r?\n|\r/g,'');
-			config.password = password.replace(/\r?\n|\r/g,'');
-			fs.writeFileSync('./config.json', JSON.stringify({discord:config}).replace(/\r?\n|\r/g,''));
+			config.email = email.replace(/\r?\n|\r/g, '');
+			config.password = password.replace(/\r?\n|\r/g, '');
+			fs.writeFileSync('./config.json', JSON.stringify({
+				discord : config
+			}).replace(/\r?\n|\r/g, ''));
 			mainProcess();
 		});
 	});
