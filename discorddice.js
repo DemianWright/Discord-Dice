@@ -10,7 +10,7 @@ var forward = [];
 var output = '';
 var currentActors = [];
 var activeChannels = '';
-var boldOnes = '';
+var minMaxBold = '**';
 var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
 
@@ -102,7 +102,7 @@ var exaltedDice = function(message) {
 			successes += 1;
 		}
 		if (result === 1) {
-			builder += boldOnes + result + boldOnes;
+			builder += minMaxBold + result + minMaxBold;
 		} else if (result >= double) {
 			builder += '**' + result + '**';
 		} else if (result >= target) {
@@ -155,7 +155,7 @@ var wodDice = function(message) {
 			sucDice += 1;
 		}
 		if (result === 1) {
-			builder += boldOnes + result + boldOnes;
+			builder += minMaxBold + result + minMaxBold;
 		} else if (result >= again) {
 			builder += '**' + result + '**';
 		} else if (result >= 8) {
@@ -303,7 +303,7 @@ var shadowrunDice = function(message) {
 			sucDice += 1;
 		}
 		if (result === 1) {
-			builder += boldOnes + result + boldOnes;
+			builder += minMaxBold + result + minMaxBold;
 		} else if (result >= 6) {
 			builder += '**' + result + '**';
 		} else if (result >= 5) {
