@@ -40,6 +40,7 @@ var fateDeck = [];
 
 var baseDice = function(rollerUsername, diceArray) {
 	console.log('Base Dice: ' + diceArray);
+
 	if (!diceArray) {
 		return null;
 	}
@@ -55,12 +56,16 @@ var baseDice = function(rollerUsername, diceArray) {
 	var diceRoll;
 
 	// Minimum 1 die.
-	diceCount = isNaN(diceCount) ? 1 : diceCount;
+	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
+
+	// Minimum size 2 die.
+	diceSize = diceSize < 2 ? 2 : diceSize;
 
 	// Default to +0.
 	intMod = isNaN(intMod) ? 0 : intMod;
 
-	console.log(rollerUsername + ' rolls: ' + diceCount + 'd' + diceSize + '' + (intMod >= 0 ? '+' + intMod : intMod));
+	var diceMsg = diceCount + 'd' + diceSize + '' + (intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod))
+	console.log(rollerUsername + ' rolls: ' + diceMsg);
 
 	while (diceCount > 0) {
 		diceRoll = Math.floor(Math.random() * diceSize) + 1;
@@ -77,13 +82,98 @@ var baseDice = function(rollerUsername, diceArray) {
 		diceCount -= 1;
 
 		if (diceCount > 0) {
-			resultText += ',';
+			resultText += ', ';
 		}
 	}
 
 	total += intMod;
 
-	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceArray[0] + ' = [ **' + total + '** ]';
+	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
+};
+
+/*
+ * ======== DND DICE ========
+ */
+var dndDice = function(rollerUsername, diceArray) {
+	console.log('DnD Dice: ' + diceArray);
+
+	if (!diceArray) {
+		return null;
+	}
+
+	// Index 0 is the whole message.
+	var diceCount = parseInt(diceArray[2], 10);
+	// TODO: Limit size to 600.
+	var diceSize = parseInt(diceArray[3], 10);
+	var intMod = parseInt(diceArray[4], 10);
+
+	var resultText = '';
+	var total = 0;
+	var minMax = 0;
+	var minDiceRoll;
+	var maxDiceRoll = 0;
+	var diceRoll;
+
+	// Minimum 1 die.
+	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
+
+	// Minimum size 2 die.
+	diceSize = diceSize < 2 ? 2 : diceSize;
+
+	// Default to +0.
+	intMod = isNaN(intMod) ? 0 : intMod;
+	
+	// Push the minimum result to over the largest possible result of the first roll to make the first roll the minimum result.
+	minDiceRoll = diceSize + 1;
+
+	if (diceArray[1] == 'a') {
+		minMax = 1;
+	} else if (diceArray[1] == 'd') {
+		minMax = -1;
+	}
+
+	// Minimum 2 dice with advantage/disadvantage.
+	diceCount = minMax === 0 ? diceCount : (diceCount === 1 ? 2 : diceCount);
+
+	var diceMsg = (undefined === diceArray[1] ? '' : diceArray[1]) + diceCount + 'd' + diceSize + '' + (intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod));
+	console.log(rollerUsername + ' rolls: ' + diceMsg);
+	
+	while (diceCount > 0) {
+		diceRoll = Math.floor(Math.random() * diceSize) + 1;
+
+		if (diceRoll === 1 || diceRoll === diceSize) {
+			resultText += minMaxBold + diceRoll + minMaxBold;
+		} else {
+			resultText += diceRoll;
+		}
+
+		if (minMax === 0) {
+			total += diceRoll;
+		} else if (minMax > 0) {
+			maxDiceRoll = Math.max(diceRoll, maxDiceRoll);
+		} else {
+			minDiceRoll = Math.min(diceRoll, minDiceRoll);
+		}
+
+		diceCount -= 1;
+
+		if (diceCount > 0) {
+			resultText += ', ';
+		}
+	}
+
+	// Meh, no need to check which one to use.
+	total += intMod;
+	maxDiceRoll += intMod;
+	minDiceRoll += intMod;
+
+	if (minMax === 0) {
+		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
+	} else if (minMax > 0) {
+		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED W/** ***ADV.***: ' + diceMsg + ' = [ **' + maxDiceRoll + '** ]';
+	} else {
+		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED W/** ***DISADV.***: ' + diceMsg + ' = [ **' + minDiceRoll + '** ]';
+	}
 };
 
 var shuffle = function(array) {
@@ -814,6 +904,9 @@ var parseRoll = function(message, rollMessage) {
 	switch (selectedGameIndex) {
 		case 0:
 			resultText = baseDice(message.author.username, rollMessage.match(regexBase));
+			break;
+		case 1:
+			resultText = dndDice(message.author.username, rollMessage.match(regexDND));
 			break;
 		default:
 			console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
