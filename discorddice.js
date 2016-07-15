@@ -3,13 +3,33 @@ var fs = require('fs');
 
 var mybot = new Discord.Client();
 
+// var supportedGames = ['base','ex','or','sr','dnd','l5r','wod']
+// var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
+var supportedGames = ['base', 'dnd']
+var supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
+var selectedGameIndex = -1;
+
+// All regex matches are case insensitive.
+var regexRollMessage = /^\/?r? ?\(?(.*d\d+.*)\)?$/i;
+
+// Games.
+var regexDND = /^([ad]?) ?(\d*)d(\d+) ?([+-]\d+)?$/i;
+var regexBase = /^(\d+)?d(\d+) ?([+-]\d+)?$/i;
+
+// Unsupported for now.
+var regexExalted = /^\d+?e/i;
+var regexWOD = /^\d+?w/i;
+var regexShadowrun = /^\d+?s/i;
+var regexL5R = /^\d+?k/i;
+var regexOneRing = /^\d+?r/i;
+
 var config;
 var tracker = {};
 var back = [];
 var forward = [];
 var output = '';
 var currentActors = [];
-var activeChannels = '';
+var activeChannels = [];
 var minMaxBold = '**';
 var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
@@ -172,45 +192,58 @@ var wodDice = function(message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
-var baseDice = function(message) {
-	var dice = message.match(/([0-9]+)d([0-9]+)/);
-	var auto = message.match(/(\+|-)([0-9]+)/);
-	var diceSize;
+/* 
+ * =========
+ * BASE DICE
+ * =========
+ */
+
+var baseDice = function(rollerUsername, diceArray) {
+	console.log('Base Dice: ' + diceArray);
+	if (!diceArray) {
+		return null;
+	}
+
+	// Index 0 is the whole message.
+	var diceCount = parseInt(diceArray[1], 10);
+	// TODO: Limit size to 600.
+	var diceSize = parseInt(diceArray[2], 10);
+	var intMod = parseInt(diceArray[3], 10);
+
+	var resultText = '';
 	var total = 0;
-	var builder = '';
-	var result;
-	if (dice) {
-		diceSize = parseInt(dice[2], 10);
-		dice = parseInt(dice[1], 10);
-	} else {
-		dice = 1;
-		diceSize = 6;
-	}
-	if (auto) {
-		auto = parseInt(auto[0], 10);
-	} else {
-		auto = 0;
-	}
-	while (dice > 0) {
-		result = Math.floor(Math.random() * diceSize);
-		if (result === 0) {
-			result = diceSize;
-		}
-		if (result === 1) {
-			builder += boldOnes + result + boldOnes;
-		} else if (result === diceSize) {
-			builder += '**' + result + '**';
+	var diceRoll;
+
+	// Minimum 1 die.
+	diceCount = isNaN(diceCount) ? 1 : diceCount;
+
+	// Default to +0.
+	intMod = isNaN(intMod) ? 0 : intMod;
+
+	console.log(rollerUsername + ' rolls: ' + diceCount + 'd' + diceSize + '' + (intMod >= 0 ? '+' + intMod : intMod));
+
+	while (diceCount > 0) {
+		diceRoll = Math.floor(Math.random() * diceSize) + 1;
+
+		if (diceRoll === 1) {
+			resultText += minMaxBold + diceRoll + minMaxBold;
+		} else if (diceRoll === diceSize) {
+			resultText += minMaxBold + diceRoll + minMaxBold;
 		} else {
-			builder += result;
+			resultText += diceRoll;
 		}
-		total += result;
-		dice -= 1;
-		if (dice > 0) {
-			builder += ',';
+
+		total += diceRoll;
+		diceCount -= 1;
+
+		if (diceCount > 0) {
+			resultText += ',';
 		}
 	}
-	total += auto;
-	return builder + '\n' + '**TOTAL: ' + total + '**';
+
+	total += intMod;
+
+	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceArray[0] + ' = [ **' + total + '** ]';
 };
 
 var fudgeDice = function() {
@@ -771,53 +804,107 @@ var initiativeHandler = function(message) {
 	}
 };
 
-var mainProcess = function() {
+/* 
+ * ==========
+ * PARSE ROLL
+ * ==========
+ */
 
-	mybot.on('message', function(message) {
-		var result;
-		var msg = message.content.match(/\((.+)\)/) || message.content.match(/\/roll (.+)/);
-		if (message.content === '!startDice') {
-			if (activeChannels.indexOf(message.channel.id) === -1) {
-				activeChannels += message.channel.id;
-			}
-		} else if (message.content === '!stopDice') {
-			activeChannels = activeChannels.replace(message.channel.id, '');
-		} else if (message.content === '!boldOnes') {
-			if (boldOnes === '') {
-				boldOnes = '***';
+var parseRoll = function(message, rollMessage) {
+	var resultText;
+
+	console.log('rollMessage: ' + rollMessage);
+
+	switch (selectedGameIndex) {
+		case 0:
+			resultText = baseDice(message.author.username, rollMessage.match(regexBase));
+			break;
+		default:
+			console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
+	}
+
+	if (resultText) {
+		mybot.reply(message, resultText);
+	}
+}
+
+/* 
+ * ====================
+ * DISCORD DICE COMMAND
+ * ====================
+ */
+
+var parseDiscordDiceCommand = function(message) {
+	var args = message.content.substring(1).toLowerCase().split(' ');
+	var msg;
+
+	switch (args[0]) {
+		case 'g':
+			if (supportedGames.indexOf(args[1]) > -1) {
+				selectedGameIndex = supportedGames.indexOf(args[1]);
+				msg = '<DD> Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+
+				if (activeChannels.indexOf(message.channel.id) === -1) {
+					activeChannels.push(message.channel.id);
+					console.log('<DD> DISCORD DICE ENABLED @ ' + message.channel.id);
+				}
 			} else {
-				boldOnes = '';
+				msg = '<DD> Unknown game \'' + args[1] + '\'.';
 			}
+			break;
+
+		case 'doff':
+		case 'diceoff':
+		case 'stopdice':
+			var index = activeChannels.indexOf(message.channel.id);
+
+			if (index !== -1) {
+				activeChannels.splice(index, 1);
+				msg = '<DD> Discord Dice disabled.';
+			}
+			break;
+
+		case 'bold':
+		case 'bolds':
+			msg = '<DD> Disabled bolding ones and maximum dice results.';
+
+			if ('**' === minMaxBold) {
+				minMaxBold = '';
+			} else {
+				msg = '<DD> Enabled bolding ones and maximum dice results.';
+				minMaxBold = '**';
+			}
+			break;
+		default:
+			msg = '<DD> Unknown command \'' + args[0] + '\'.';
+	}
+
+	console.log(msg);
+	mybot.reply(message, msg);
+}
+
+/* 
+ * ============
+ * MAIN PROCESS
+ * ============
+ */
+
+var mainProcess = function() {
+	mybot.on('message', function(message) {
+		// Is the message a Discord Dice command?
+		if (message.content.charAt(0) == '!') {
+			parseDiscordDiceCommand(message);
 		} else if (activeChannels.indexOf(message.channel.id) > -1) {
-			if (msg) {
-				if (msg[1].match(/^[0-9]+?e/)) {
-					result = exaltedDice(msg[1]);
-				} else if (msg[1].match(/^[0-9]+?w/)) {
-					result = wodDice(msg[1]);
-				} else if (msg[1].match(/^[0-9]+?d/)) {
-					result = baseDice(msg[1]);
-				} else if (msg[1].match(/^[0-9]+?s/)) {
-					result = shadowrunDice(msg[1]);
-				} else if (msg[1].match(/^[0-9]+?k/)) {
-					result = l5rDice(msg[1]);
-				} else if (msg[1].match(/^[0-9]+?r/)) {
-					result = oneRingDice(msg[1]);
-				} else if (msg[1] === 'fudge') {
-					result = fudgeDice();
-				} else if (msg[1] === 'fdraw') {
-					result = fateCards(message);
-				} else if (msg[1] === 'fshuffle') {
-					fateDeck = fateMasterDeck.slice(0);
-					shuffle(fateDeck);
-					result = 'Fate Deck Shuffled';
-				} else if (msg[1] === 'fcount') {
-					result = fateCount();
+			var rollMessage = regexRollMessage.exec(message.content);
+
+			// If the message matched the roll message regex.
+			if (rollMessage) {
+				if (rollMessage[1].charAt(0) === '!') {
+					initiativeHandler(message);
+				} else {
+					// Group 0 is the whole message, index 1 contains the actual roll message
+					parseRoll(message, rollMessage[1]);
 				}
-				if (result) {
-					mybot.reply(message, result);
-				}
-			} else if (message.content.match(/^!/)) {
-				initiativeHandler(message);
 			}
 		}
 	});
@@ -856,8 +943,11 @@ if (config.email === 'YOUR EMAIL') {
 				discord : config
 			}).replace(/\r?\n|\r/g, ''));
 			mainProcess();
+			console.log('<DD> Ready.');
 		});
 	});
 } else {
 	mainProcess();
 }
+
+console.log('<DD> Ready.');
