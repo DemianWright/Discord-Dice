@@ -34,6 +34,58 @@ var minMaxBold = '**';
 var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
 
+/*
+ * ========= BASE DICE =========
+ */
+
+var baseDice = function(rollerUsername, diceArray) {
+	console.log('Base Dice: ' + diceArray);
+	if (!diceArray) {
+		return null;
+	}
+
+	// Index 0 is the whole message.
+	var diceCount = parseInt(diceArray[1], 10);
+	// TODO: Limit size to 600.
+	var diceSize = parseInt(diceArray[2], 10);
+	var intMod = parseInt(diceArray[3], 10);
+
+	var resultText = '';
+	var total = 0;
+	var diceRoll;
+
+	// Minimum 1 die.
+	diceCount = isNaN(diceCount) ? 1 : diceCount;
+
+	// Default to +0.
+	intMod = isNaN(intMod) ? 0 : intMod;
+
+	console.log(rollerUsername + ' rolls: ' + diceCount + 'd' + diceSize + '' + (intMod >= 0 ? '+' + intMod : intMod));
+
+	while (diceCount > 0) {
+		diceRoll = Math.floor(Math.random() * diceSize) + 1;
+
+		if (diceRoll === 1) {
+			resultText += minMaxBold + diceRoll + minMaxBold;
+		} else if (diceRoll === diceSize) {
+			resultText += minMaxBold + diceRoll + minMaxBold;
+		} else {
+			resultText += diceRoll;
+		}
+
+		total += diceRoll;
+		diceCount -= 1;
+
+		if (diceCount > 0) {
+			resultText += ',';
+		}
+	}
+
+	total += intMod;
+
+	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceArray[0] + ' = [ **' + total + '** ]';
+};
+
 var shuffle = function(array) {
 	var currentIndex = array.length, temporaryValue, randomIndex;
 
@@ -190,60 +242,6 @@ var wodDice = function(message) {
 	}
 	successes += auto;
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
-};
-
-/* 
- * =========
- * BASE DICE
- * =========
- */
-
-var baseDice = function(rollerUsername, diceArray) {
-	console.log('Base Dice: ' + diceArray);
-	if (!diceArray) {
-		return null;
-	}
-
-	// Index 0 is the whole message.
-	var diceCount = parseInt(diceArray[1], 10);
-	// TODO: Limit size to 600.
-	var diceSize = parseInt(diceArray[2], 10);
-	var intMod = parseInt(diceArray[3], 10);
-
-	var resultText = '';
-	var total = 0;
-	var diceRoll;
-
-	// Minimum 1 die.
-	diceCount = isNaN(diceCount) ? 1 : diceCount;
-
-	// Default to +0.
-	intMod = isNaN(intMod) ? 0 : intMod;
-
-	console.log(rollerUsername + ' rolls: ' + diceCount + 'd' + diceSize + '' + (intMod >= 0 ? '+' + intMod : intMod));
-
-	while (diceCount > 0) {
-		diceRoll = Math.floor(Math.random() * diceSize) + 1;
-
-		if (diceRoll === 1) {
-			resultText += minMaxBold + diceRoll + minMaxBold;
-		} else if (diceRoll === diceSize) {
-			resultText += minMaxBold + diceRoll + minMaxBold;
-		} else {
-			resultText += diceRoll;
-		}
-
-		total += diceRoll;
-		diceCount -= 1;
-
-		if (diceCount > 0) {
-			resultText += ',';
-		}
-	}
-
-	total += intMod;
-
-	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceArray[0] + ' = [ **' + total + '** ]';
 };
 
 var fudgeDice = function() {
@@ -804,10 +802,8 @@ var initiativeHandler = function(message) {
 	}
 };
 
-/* 
- * ==========
- * PARSE ROLL
- * ==========
+/*
+ * ========== PARSE ROLL ==========
  */
 
 var parseRoll = function(message, rollMessage) {
@@ -828,10 +824,8 @@ var parseRoll = function(message, rollMessage) {
 	}
 }
 
-/* 
- * ====================
- * DISCORD DICE COMMAND
- * ====================
+/*
+ * ==================== DISCORD DICE COMMAND ====================
  */
 
 var parseDiscordDiceCommand = function(message) {
@@ -883,10 +877,8 @@ var parseDiscordDiceCommand = function(message) {
 	mybot.reply(message, msg);
 }
 
-/* 
- * ============
- * MAIN PROCESS
- * ============
+/*
+ * ============ MAIN PROCESS ============
  */
 
 var mainProcess = function() {
