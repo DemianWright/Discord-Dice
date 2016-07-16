@@ -122,7 +122,9 @@ var dndDice = function(rollerUsername, diceArray) {
 
 	// Default to +0.
 	intMod = isNaN(intMod) ? 0 : intMod;
-	
+
+	var intModText = intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod);
+
 	// Push the minimum result to over the largest possible result of the first roll to make the first roll the minimum result.
 	minDiceRoll = diceSize + 1;
 
@@ -135,9 +137,9 @@ var dndDice = function(rollerUsername, diceArray) {
 	// Minimum 2 dice with advantage/disadvantage.
 	diceCount = minMax === 0 ? diceCount : (diceCount === 1 ? 2 : diceCount);
 
-	var diceMsg = (undefined === diceArray[1] ? '' : diceArray[1]) + diceCount + 'd' + diceSize + '' + (intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod));
+	var diceMsg = (undefined === diceArray[1] ? '' : diceArray[1]) + diceCount + 'd' + diceSize + '' + intModText;
 	console.log(rollerUsername + ' rolls: ' + diceMsg);
-	
+
 	while (diceCount > 0) {
 		diceRoll = Math.floor(Math.random() * diceSize) + 1;
 
@@ -162,18 +164,46 @@ var dndDice = function(rollerUsername, diceArray) {
 		}
 	}
 
-	// Meh, no need to check which one to use.
-	total += intMod;
-	maxDiceRoll += intMod;
-	minDiceRoll += intMod;
-
-	if (minMax === 0) {
-		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
-	} else if (minMax > 0) {
-		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED W/** ***ADV.***: ' + diceMsg + ' = [ **' + maxDiceRoll + '** ]';
+	resultText += '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED';
+	
+	if (intMod === 0) {
+		switch (minMax) {
+			case 1:
+				resultText += ' W/** ***ADV.*** : `' + diceMsg + '` = `[ ' + maxDiceRoll + ' ]`';
+				console.log('\t= ' + maxDiceRoll);
+				break;
+			case -1:
+				resultText += ' W/** ***DISADV.*** : `' + diceMsg + '` = `[ ' + minDiceRoll + ' ]`';
+				console.log('\t= ' + minDiceRoll);
+				break;
+			default:
+				resultText += ' :** `' + diceMsg + '` = `[ ' + total + ' ]`';
+				console.log('\t= ' + total);
+				break;
+		}
 	} else {
-		return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED W/** ***DISADV.***: ' + diceMsg + ' = [ **' + minDiceRoll + '** ]';
+		switch (minMax) {
+			case 1:
+				resultText += ' W/** ***ADV.*** : `' + diceMsg + '` ─> `' + maxDiceRoll + intModText + '`';
+				maxDiceRoll += intMod;
+				resultText += ' = `[ ' + maxDiceRoll + ' ]`';
+				console.log('\t= ' + maxDiceRoll);
+				break;
+			case -1:
+				resultText += ' W/** ***DISADV.*** : `' + diceMsg + '` ─> `' + minDiceRoll + intModText + '`';
+				minDiceRoll += intMod;
+				resultText += ' = `[ ' + minDiceRoll + ' ]`';
+				console.log('\t= ' + minDiceRoll);
+				break;
+			default:
+				resultText += ' :** `' + diceMsg + '` ─> `' + total + intModText + '`';
+				total += intMod;
+				resultText += ' = `[ ' + total + ' ]`';
+				console.log('\t= ' + total);
+				break;
+		}
 	}
+	return resultText;
 };
 
 var shuffle = function(array) {
