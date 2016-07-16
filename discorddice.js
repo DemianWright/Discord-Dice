@@ -898,22 +898,31 @@ var initiativeHandler = function(message) {
 
 var parseRoll = function(message, rollMessage) {
 	var resultText;
+	var rolls = rollMessage.split(',');
 
-	console.log('rollMessage: ' + rollMessage);
+	rolls = null === rolls ? [rollMessage] : rolls;
 
-	switch (selectedGameIndex) {
-		case 0:
-			resultText = baseDice(message.author.username, rollMessage.match(regexBase));
-			break;
-		case 1:
-			resultText = dndDice(message.author.username, rollMessage.match(regexDND));
-			break;
-		default:
-			console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
-	}
+	var length = rolls.length;
 
-	if (resultText) {
-		mybot.reply(message, resultText);
+	console.log('rolls: ' + rolls);
+	for (var i = 0; i < length; i++) {
+		roll = rolls[i].trim();
+		console.log('roll: ' + roll);
+
+		switch (selectedGameIndex) {
+			case 0:
+				resultText = baseDice(message.author.username, roll.match(regexBase));
+				break;
+			case 1:
+				resultText = dndDice(message.author.username, roll.match(regexDND));
+				break;
+			default:
+				console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
+		}
+
+		if (resultText) {
+			mybot.reply(message, resultText);
+		}
 	}
 }
 
