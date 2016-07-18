@@ -3,9 +3,9 @@ var fs = require('fs');
 
 var mybot = new Discord.Client();
 
-// var supportedGames = ['base','ex','or','sr','dnd','l5r','wod']
+// var supportedGames = ['stdd','ex','or','sr','dnd','l5r','wod']
 // var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
-var supportedGames = ['base', 'dnd']
+var supportedGames = ['stdd', 'dnd']
 var supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
 var selectedGameIndex = -1;
 
@@ -14,7 +14,7 @@ var regexRollMessage = /^\/?r? ?\(?(.*d\d+.*)\)?$/i;
 
 // Games.
 var regexDND = /^([ad]?) ?(\d*)d(\d+) ?([+-]\d+)?$/i;
-var regexBase = /^(\d+)?d(\d+) ?([+-]\d+)?$/i;
+var regexStdD = /^(\d+)?d(\d+) ?([+-]\d+)?$/i;
 
 // Unsupported for now.
 var regexExalted = /^\d+?e/i;
@@ -22,6 +22,7 @@ var regexWOD = /^\d+?w/i;
 var regexShadowrun = /^\d+?s/i;
 var regexL5R = /^\d+?k/i;
 var regexOneRing = /^\d+?r/i;
+// TODO: Eldritch.
 
 var config;
 var tracker = {};
@@ -34,12 +35,14 @@ var minMaxBold = '**';
 var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
 
-/*
- * ========= BASE DICE =========
+/* 
+ * ============= STANDARD DICE =============
  */
 
-var baseDice = function(rollerUsername, diceArray) {
-	console.log('Base Dice: ' + diceArray);
+var standardDice = function(rollerUsername, diceArray) {
+	// TODO: Refactor into a separate function for reuse.
+
+	console.log('Standard Dice: ' + diceArray);
 
 	if (!diceArray) {
 		return null;
@@ -47,7 +50,6 @@ var baseDice = function(rollerUsername, diceArray) {
 
 	// Index 0 is the whole message.
 	var diceCount = parseInt(diceArray[1], 10);
-	// TODO: Limit size to 600.
 	var diceSize = parseInt(diceArray[2], 10);
 	var intMod = parseInt(diceArray[3], 10);
 
@@ -57,6 +59,9 @@ var baseDice = function(rollerUsername, diceArray) {
 
 	// Minimum 1 die.
 	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
+
+	// Maximum 600 dice. Did some manual testing and it seems to be the limit on my machine.
+	diceCount = diceCount > 600 ? 600 : diceCount;
 
 	// Minimum size 2 die.
 	diceSize = diceSize < 2 ? 2 : diceSize;
@@ -103,7 +108,6 @@ var dndDice = function(rollerUsername, diceArray) {
 
 	// Index 0 is the whole message.
 	var diceCount = parseInt(diceArray[2], 10);
-	// TODO: Limit size to 600.
 	var diceSize = parseInt(diceArray[3], 10);
 	var intMod = parseInt(diceArray[4], 10);
 
@@ -116,6 +120,9 @@ var dndDice = function(rollerUsername, diceArray) {
 
 	// Minimum 1 die.
 	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
+
+	// Maximum 600 dice. Did some manual testing and it seems to be the limit on my machine.
+	diceCount = diceCount > 600 ? 600 : diceCount;
 
 	// Minimum size 2 die.
 	diceSize = diceSize < 2 ? 2 : diceSize;
@@ -165,7 +172,7 @@ var dndDice = function(rollerUsername, diceArray) {
 	}
 
 	resultText += '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED';
-	
+
 	if (intMod === 0) {
 		switch (minMax) {
 			case 1:
@@ -941,7 +948,7 @@ var parseRoll = function(message, rollMessage) {
 
 		switch (selectedGameIndex) {
 			case 0:
-				resultText = baseDice(message.author.username, roll.match(regexBase));
+				resultText = standardDice(message.author.username, roll.match(regexStdD));
 				break;
 			case 1:
 				resultText = dndDice(message.author.username, roll.match(regexDND));
@@ -986,7 +993,7 @@ var parseDiscordDiceCommand = function(message) {
 
 			if (index !== -1) {
 				activeChannels.splice(index, 1);
-				msg = '<DD> Discord Dice disabled.';
+				msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 			}
 			break;
 
