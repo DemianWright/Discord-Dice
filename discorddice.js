@@ -10,11 +10,11 @@ var supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
 var selectedGameIndex = -1;
 
 // All regex matches are case insensitive.
-var regexRollMessage = /^\/?r? ?\(?(.*d\d+.*)\)?$/i;
+var regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
 
 // Games.
-var regexDND = /^([ad]?) ?(\d*)d(\d+) ?([+-]\d+)?$/i;
-var regexStdD = /^(\d+)?d(\d+) ?([+-]\d+)?$/i;
+var regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
+var regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
 
 // Unsupported for now.
 var regexExalted = /^\d+?e/i;
@@ -26,7 +26,7 @@ var regexOneRing = /^\d+?r/i;
 
 // Unit conversions.
 var regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)/;
-var regexConversion = /^\/?c?\s?\(?(.*\d+ ?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
+var regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
 var regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
 
 var config;
@@ -1174,10 +1174,15 @@ var parseDiscordDiceCommand = function(message) {
 			var index = activeChannels.indexOf(message.channel.id);
 
 			if (index !== -1) {
-				msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+				console.log('<DD> Channel ID: ' + message.channel.id);
+				
+				if (selectedGameIndex !== -1) {
+					msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+					mybot.reply(message, msg);
+				}
 
 				activeChannels.splice(index, 1);
-				console.log('<DD> Discord Dice disabled @ ' + message.channel.id);
+				msg = '<DD> Discord Dice disabled.';
 			}
 			break;
 

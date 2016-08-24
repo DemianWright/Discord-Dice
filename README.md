@@ -6,16 +6,19 @@ To send a Discord Dice command add an exclamation mark (!) to the beginning of t
 Dice rolling commands have their own message format.
 All commands are case-insensitive.
 
-    Command                   : Description
-    ---------------------------------------
-    g <game name>             : Start playing the specified game.
-    doff / diceoff / stopdice : Stop playing a game and responding to rolls.
-    bold / bolds              : Toggle bolding ones and maximum dice values in dice results.
+    Command                                      : Description
+    -----------------------------------------------------------------------------------------------------------
+    dd / don / dice / ddice / diceon / startdice : Start Discord Dice and listen to commands.
+    g                                            : List supported games.
+    g <game name>                                : Start playing the specified game.
+    doff / nodice / diceoff / stopdice           : Stop Discord Dice and only listen for a start command.
+    bold / bolds                                 : Toggle bolding 1 and maximum dice values in dice results.
 
 Once a game has been started, to perform a dice roll send a message in any one of the following formats.
 `<roll>` stands for a game-specific roll message format described later.
 All spaces in the commands below are optional: `r <roll>` and `r<roll>` are equivalent.
 
+    /r (<roll>)
     /r <roll>
     / <roll>
     r <roll>
@@ -27,8 +30,8 @@ Use these game names with the `!g` command.
 
     Name : Description
     ------------------
-    stdd : Standard dice with no extra features apart from the modifier.
-    dnd  : Dungeons & Dragons. Supports +/- modifier, advantage and disadvantage rolls.
+    stdd : Standard dice with with support for a +/- modifier on the final result.
+    dnd  : Dungeons & Dragons. Supports final result modifier, advantage and disadvantage rolls.
 
 # Legend #
 A legend of symbols used in the message formats.
@@ -37,9 +40,9 @@ If a value is given for a symbol that is smaller or greater than the specified m
     Symbol   : Description
     ----------------------
     X        : Number of dice to roll. Minimum 1, maximum 600.
-    Y        : Number of faces on the dice to roll. Minimum 2, no maximum limit.
+    Y        : Number of faces on the die to roll. Minimum 2, no maximum limit. If less than 2 is given, 2 is used.
     +Z / -Z  : Number to add or remove from the final roll result. No limits.
-    d        : Stands for the literal character 'd'.
+    d        : Stands for the literal character 'd' or 'D'.
 
 # Games #
 ## Standard Dice (stdd) ##
@@ -71,9 +74,9 @@ Roll message formats:
 
 ### Advantage Rolls ###
 Advantage rolls only take the highest die result into the final result.
-The are done by prefixing the standard roll message with `a`.
+The are done by prefixing the standard roll message with `a`. (Case in-sensitive.)
 When doing an advantage roll, you must roll a minimum of two dice.
-If less dice are provided (or none at all) two dice are rolled.
+If less dice are provided (or no number at all) two dice are rolled.
 
 The space before the modifier is optional: `aXdY +Z` and `aXdY+Z` are equivalent.
 Roll message formats:
@@ -95,9 +98,9 @@ The full chat message for an advantage roll could be for example `/ a3d8` or `ra
     
 ### Disadvantage Rolls ###
 Disadvantage rolls only take the lowest die result into the final result.
-The are done by prefixing the standard roll message with `d`.
+The are done by prefixing the standard roll message with `d`. (Case in-sensitive.)
 When doing a disadvantage roll, you must roll a minimum of two dice.
-If less dice are provided (or none at all) two dice are rolled.
+If less dice are provided (or no number at all) two dice are rolled.
 
 The space before the modifier is optional: `ddY -Z` and `ddY-Z` are equivalent.
 Roll message formats:
