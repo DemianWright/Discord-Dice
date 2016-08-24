@@ -1077,6 +1077,44 @@ var initiativeHandler = function(message) {
 };
 
 /*
+ * ========= COIN FLIP =========
+ */
+var coinFlip = function(message, count) {
+	console.log("Coin Flip: " + count);
+
+	if (count == 1) {
+		var resultText = "Coin Flip: ";
+	} else {
+		var resultText = "Coin Flips: ";
+	}
+
+	var headsCount = 0;
+	var tailsCount = 0;
+
+	for (var i = 0; i < count; i++) {
+		if (Math.random() >= 0.5) {
+			resultText += "H";
+			headsCount++;
+		} else {
+			resultText += "T";
+			tailsCount++;
+		}
+
+		if (i < count - 1) {
+			resultText += ", ";
+		}
+	}
+
+	if (count != 1) {
+		resultText += "\nHeads: " + headsCount + " | Tails: " + tailsCount;
+	}
+
+	if (resultText) {
+		mybot.reply(message, resultText);
+	}
+}
+
+/*
  * ========== PARSE ROLL ==========
  */
 
@@ -1175,7 +1213,7 @@ var parseDiscordDiceCommand = function(message) {
 
 			if (index !== -1) {
 				console.log('<DD> Channel ID: ' + message.channel.id);
-				
+
 				if (selectedGameIndex !== -1) {
 					msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 					mybot.reply(message, msg);
@@ -1197,6 +1235,29 @@ var parseDiscordDiceCommand = function(message) {
 					msg = '<DD> Enabled bolding ones and maximum dice results.';
 					minMaxBold = '**';
 				}
+			}
+			break;
+
+		case 'cf':
+		case 'fc':
+		case 'coin':
+		case 'flip':
+		case 'coinflip':
+		case 'flipcoin':
+			if (activeChannels.indexOf(message.channel.id) !== -1) {
+				var count = 1;
+
+				if (args.length > 1) {
+					count = parseInt(args[1]);
+
+					// Limit to 1.
+					count = count < 1 ? 1 : count;
+
+					// Limit to 100.
+					count = count > 100 ? 100 : count;
+				}
+
+				msg = coinFlip(message, count);
 			}
 			break;
 

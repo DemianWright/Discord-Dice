@@ -7,11 +7,12 @@ Dice rolling commands have their own message format.
 All commands are case-insensitive.
 
     Command                                      : Description
-    -----------------------------------------------------------------------------------------------------------
+    ---------------------------------------------------------------------------------------------------------------------------------------------------------------
     dd / don / dice / ddice / diceon / startdice : Start Discord Dice and listen to commands.
+    doff / nodice / diceoff / stopdice           : Stop Discord Dice and only listen for a start command.
+    cf / fc / coin / flip / coinflip / flipcoin  : Flip a coin. Minimum 1, maximum 100. If a value outside the bounds is provided, it is set to the bounding value.
     g                                            : List supported games.
     g <game name>                                : Start playing the specified game.
-    doff / nodice / diceoff / stopdice           : Stop Discord Dice and only listen for a start command.
     bold / bolds                                 : Toggle bolding 1 and maximum dice values in dice results.
 
 Once a game has been started, to perform a dice roll send a message in any one of the following formats.
