@@ -24,6 +24,11 @@ var regexL5R = /^\d+?k/i;
 var regexOneRing = /^\d+?r/i;
 // TODO: Eldritch.
 
+// Unit conversions.
+var regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)/;
+var regexConversion = /^\/?c?\s?\(?(.*\d+ ?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
+var regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
+
 var config;
 var tracker = {};
 var back = [];
@@ -35,7 +40,151 @@ var minMaxBold = '**';
 var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
 var fateDeck = [];
 
-/* 
+// Unit conversions.
+
+var lengthUnitSymbols = ["mm", "cm", "m", "km", "in", "\"", "''", "ft", "'", "yd", "mi"];
+
+var inchInMmeters = 0.0254;
+var footInMeters = 0.3048;
+var yardInMeters = 0.9144;
+var mileInMeters = 1609.344;
+
+var weigthUnitSymbols = ["mg", "g", "kg", "oz", "lb", "st"];
+
+var ounceInGrams = 28.349523125;
+var poundInGrams = 453.59237;
+var stoneInGrams = 6350.29318;
+
+/*
+ * NON-DICE STUFF
+ */
+var toFromMeters = function(value, unit, toMeters) {
+	var num = parseFloat(value);
+
+	// Lazy but it works.
+
+	switch (unit) {
+		case "''":
+		case "\"":
+		case "in":
+			if (toMeters)
+				return num * inchInMmeters;
+			else
+				return num / inchInMmeters;
+		case "'":
+		case "ft":
+			if (toMeters)
+				return num * footInMeters;
+			else
+				return num / footInMeters;
+		case "yd":
+			if (toMeters)
+				return num * yardInMeters;
+			else
+				return num / yardInMeters;
+		case "mi":
+			if (toMeters)
+				return num * mileInMeters;
+			else
+				return num / mileInMeters;
+		case "mm":
+			if (toMeters)
+				return num / Math.pow(10, 3);
+			else
+				return num * Math.pow(10, 3);
+		case "cm":
+			if (toMeters)
+				return num / Math.pow(10, 2);
+			else
+				return num * Math.pow(10, 2);
+		case "km":
+			if (toMeters)
+				return num * Math.pow(10, 3);
+			else
+				return num / Math.pow(10, 3);
+		default:
+			return num;
+	}
+}
+
+var toFromGrams = function(value, unit, toGrams) {
+	var num = parseFloat(value);
+
+	// Lazy but it works.
+
+	switch (unit) {
+		case "oz":
+			if (toGrams)
+				return num * ounceInGrams;
+			else
+				return num / ounceInGrams;
+		case "lb":
+			if (toGrams)
+				return num * poundInGrams;
+			else
+				return num / poundInGrams;
+		case "st":
+			if (toGrams)
+				return num * stoneInGrams;
+			else
+				return num / stoneInGrams;
+		case "mg":
+			if (toGrams)
+				return num / Math.pow(10, 3);
+			else
+				return num * Math.pow(10, 3);
+		case "kg":
+			if (toGrams)
+				return num * Math.pow(10, 3);
+			else
+				return num / Math.pow(10, 3);
+		default:
+			return num;
+	}
+}
+
+var unitConversion = function(inputArray, toUnit) {
+	console.log("Unit Conversion");
+
+	// Input array format: number, unit, number, unit, etc.
+	var length = inputArray.length;
+	var lengths = lengthUnitSymbols.indexOf(toUnit) > -1;
+
+	var value = 0;
+	var unit = "";
+
+	var inputBaseUnits = 0;
+	var outputText = "";
+
+	console.log("\tInput: " + inputArray);
+
+	for (var idx = 0; idx < length - 1; idx += 2) {
+		value = inputArray[idx];
+		unit = inputArray[idx + 1];
+
+		if (lengths) {
+			inputBaseUnits += toFromMeters(value, unit, true);
+		} else {
+			inputBaseUnits += toFromGrams(value, unit, true);
+		}
+
+		outputText += value + " " + unit + " ";
+	}
+
+	var result = 0;
+
+	if (lengths) {
+		result = toFromMeters(inputBaseUnits, toUnit, false);
+	} else {
+		result = toFromGrams(inputBaseUnits, toUnit, false);
+	}
+
+	console.log("\t= " + result + " " + toUnit);
+
+	return outputText + " = " + result.toFixed(2) + " " + toUnit;
+}
+
+/*
  * ============= STANDARD DICE =============
  */
 
@@ -972,6 +1121,18 @@ var parseDiscordDiceCommand = function(message) {
 	var msg;
 
 	switch (args[0]) {
+		case 'dd':
+		case 'don':
+		case 'ddice':
+		case 'diceon':
+		case 'startdice':
+			if (activeChannels.indexOf(message.channel.id) === -1) {
+				activeChannels.push(message.channel.id);
+				console.log('<DD> Channel ID: ' + message.channel.id);
+				msg = '<DD> Discord Dice enabled.';
+			}
+			break;
+
 		case 'g':
 			if (supportedGames.indexOf(args[1]) > -1) {
 				selectedGameIndex = supportedGames.indexOf(args[1]);
@@ -979,7 +1140,7 @@ var parseDiscordDiceCommand = function(message) {
 
 				if (activeChannels.indexOf(message.channel.id) === -1) {
 					activeChannels.push(message.channel.id);
-					console.log('<DD> DISCORD DICE ENABLED @ ' + message.channel.id);
+					console.log('<DD> Discord Dice enabled @ ' + message.channel.id);
 				}
 			} else {
 				msg = '<DD> Unknown game \'' + args[1] + '\'.';
@@ -992,8 +1153,10 @@ var parseDiscordDiceCommand = function(message) {
 			var index = activeChannels.indexOf(message.channel.id);
 
 			if (index !== -1) {
-				activeChannels.splice(index, 1);
 				msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+
+				activeChannels.splice(index, 1);
+				console.log('<DD> Discord Dice disabled @ ' + message.channel.id);
 			}
 			break;
 
@@ -1012,9 +1175,34 @@ var parseDiscordDiceCommand = function(message) {
 			msg = '<DD> Unknown command \'' + args[0] + '\'.';
 	}
 
-	console.log(msg);
-	mybot.reply(message, msg);
+	if (typeof msg !== 'undefined') {
+		console.log(msg);
+		mybot.reply(message, msg);
+	}
 }
+
+/*
+ * ===================== PARSE UNIT CONVERSION =====================
+ */
+
+var parseUnitConversion = function(message, inputString, toUnitSymbvol) {
+	// Remove all whitespace.
+	// Convert to lower case.
+	// Replace commas with periods for floating point numbers.
+	// Split string by specific symbols.
+	// Capture said symbols.
+	// Remove the last element in the array which is empty.
+	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
+	console.log(data);
+	data.splice(data.length - 1, 1);
+	console.log(data);
+
+	var resultText = unitConversion(data, toUnitSymbvol);
+
+	if (resultText) {
+		mybot.reply(message, resultText);
+	}
+};
 
 /*
  * ============ MAIN PROCESS ============
@@ -1027,6 +1215,7 @@ var mainProcess = function() {
 			parseDiscordDiceCommand(message);
 		} else if (activeChannels.indexOf(message.channel.id) > -1) {
 			var rollMessage = regexRollMessage.exec(message.content);
+			var unitConversionMessage = regexConversion.exec(message.content);
 
 			// If the message matched the roll message regex.
 			if (rollMessage) {
@@ -1036,11 +1225,14 @@ var mainProcess = function() {
 					// Group 0 is the whole message, index 1 contains the actual roll message
 					parseRoll(message, rollMessage[1]);
 				}
+			} else if (unitConversionMessage) {
+				parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
 			}
 		}
 	});
 
 	mybot.login(config.email, config.password);
+	console.log('<DD> Ready.');
 };
 
 if (!fs.existsSync('./config.json')) {
@@ -1074,11 +1266,8 @@ if (config.email === 'YOUR EMAIL') {
 				discord : config
 			}).replace(/\r?\n|\r/g, ''));
 			mainProcess();
-			console.log('<DD> Ready.');
 		});
 	});
 } else {
 	mainProcess();
 }
-
-console.log('<DD> Ready.');
