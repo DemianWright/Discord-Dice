@@ -42,18 +42,25 @@ var fateDeck = [];
 
 // Unit conversions.
 
-var lengthUnitSymbols = ["mm", "cm", "m", "km", "in", "\"", "''", "ft", "'", "yd", "mi"];
+var lengthUnitSymbols = ['mm', 'cm', 'm', 'km', 'in', '"', "''", 'ft', "'", 'yd', 'mi'];
 
 var inchInMmeters = 0.0254;
 var footInMeters = 0.3048;
 var yardInMeters = 0.9144;
 var mileInMeters = 1609.344;
 
-var weigthUnitSymbols = ["mg", "g", "kg", "oz", "lb", "st"];
+var weigthUnitSymbols = ['mg', 'g', 'kg', 'oz', 'lb', 'st'];
 
 var ounceInGrams = 28.349523125;
 var poundInGrams = 453.59237;
 var stoneInGrams = 6350.29318;
+
+// Bottle spinning.
+var sixteenWindCompassArguments = ['h', '16', 'half'];
+var cardinalCompassArguments = ['c', 'cardinal'];
+var cardinalCompassDirections = ['north', 'east', 'south', 'west'];
+var ordinalCompassDirections = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+var sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
 
 /*
  * NON-DICE STUFF
@@ -182,6 +189,13 @@ var unitConversion = function(inputArray, toUnit) {
 	return outputText + " = " + result.toFixed(2) + " " + toUnit;
 }
 
+/**
+ * Returns a random integer in range [min, max].
+ */
+var getRandomInt = function(min, max) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 /*
  * ============= STANDARD DICE =============
  */
@@ -220,7 +234,7 @@ var standardDice = function(rollerUsername, diceArray) {
 	console.log(rollerUsername + ' rolls: ' + diceMsg);
 
 	while (diceCount > 0) {
-		diceRoll = Math.floor(Math.random() * diceSize) + 1;
+		diceRoll = getRandomInt(1, diceSize);
 
 		if (diceRoll === 1) {
 			resultText += minMaxBold + diceRoll + minMaxBold;
@@ -295,7 +309,7 @@ var dndDice = function(rollerUsername, diceArray) {
 	console.log(rollerUsername + ' rolls: ' + diceMsg);
 
 	while (diceCount > 0) {
-		diceRoll = Math.floor(Math.random() * diceSize) + 1;
+		diceRoll = getRandomInt(1, diceSize);
 
 		if (diceRoll === 1 || diceRoll === diceSize) {
 			resultText += minMaxBold + diceRoll + minMaxBold;
@@ -1077,15 +1091,36 @@ var initiativeHandler = function(message) {
 };
 
 /*
+ * =========== BOTTLE SPIN ===========
+ */
+var bottleSpin = function(message, mode) {
+	console.log('Bottle Spin, mode: ' + mode);
+
+	var resultText = 'The bottle points ';
+
+	if (typeof mode === 'undefined') {
+		resultText += ordinalCompassDirections[getRandomInt(0, 7)];
+	} else if (sixteenWindCompassArguments.indexOf(mode) > -1) {
+		resultText += sixteenWindDirections[getRandomInt(0, 15)];
+	} else if (cardinalCompassArguments.indexOf(mode) > -1) {
+		resultText += cardinalCompassDirections[getRandomInt(0, 3)];
+	}
+
+	if (resultText) {
+		mybot.reply(message, resultText + '.');
+	}
+}
+
+/*
  * ========= COIN FLIP =========
  */
 var coinFlip = function(message, count) {
-	console.log("Coin Flip: " + count);
+	console.log('Coin Flip: ' + count);
 
-	if (count == 1) {
-		var resultText = "Coin Flip: ";
-	} else {
-		var resultText = "Coin Flips: ";
+	var resultText = 'Coin Flip: ';
+
+	if (count > 1) {
+		resultText = 'Coin Flips: ';
 	}
 
 	var headsCount = 0;
@@ -1093,20 +1128,20 @@ var coinFlip = function(message, count) {
 
 	for (var i = 0; i < count; i++) {
 		if (Math.random() >= 0.5) {
-			resultText += "H";
+			resultText += 'H';
 			headsCount++;
 		} else {
-			resultText += "T";
+			resultText += 'T';
 			tailsCount++;
 		}
 
 		if (i < count - 1) {
-			resultText += ", ";
+			resultText += ', ';
 		}
 	}
 
 	if (count != 1) {
-		resultText += "\nHeads: " + headsCount + " | Tails: " + tailsCount;
+		resultText += '\nHeads: ' + headsCount + ' | Tails: ' + tailsCount;
 	}
 
 	if (resultText) {
@@ -1117,7 +1152,6 @@ var coinFlip = function(message, count) {
 /*
  * ========== PARSE ROLL ==========
  */
-
 var parseRoll = function(message, rollMessage) {
 	var resultText;
 	var rolls = rollMessage.split(',');
@@ -1153,14 +1187,14 @@ var parseRoll = function(message, rollMessage) {
  */
 
 var getSupportedGamesString = function() {
-	var string = "";
+	var string = '';
 	var length = supportedGames.length;
 
 	supportedGamesNames.forEach(function(name, idx) {
 		string += name + ' (' + supportedGames[idx] + ')';
 
 		if (idx < length - 1) {
-			string += ", ";
+			string += ', ';
 		}
 	});
 
@@ -1258,6 +1292,17 @@ var parseDiscordDiceCommand = function(message) {
 				}
 
 				msg = coinFlip(message, count);
+			}
+			break;
+
+		case 'bs':
+		case 'sb':
+		case 'bottle':
+		case 'spin':
+		case 'bottlespin':
+		case 'spinbottle':
+			if (activeChannels.indexOf(message.channel.id) !== -1) {
+				msg = bottleSpin(message, args[1]);
 			}
 			break;
 

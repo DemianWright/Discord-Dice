@@ -6,14 +6,18 @@ To send a Discord Dice command add an exclamation mark (!) to the beginning of t
 Dice rolling commands have their own message format.
 All commands are case-insensitive.
 
-    Command                                      : Description
-    ---------------------------------------------------------------------------------------------------------------------------------------------------------------
-    dd / don / dice / ddice / diceon / startdice : Start Discord Dice and listen to commands.
-    doff / nodice / diceoff / stopdice           : Stop Discord Dice and only listen for a start command.
-    cf / fc / coin / flip / coinflip / flipcoin  : Flip a coin. Minimum 1, maximum 100. If a value outside the bounds is provided, it is set to the bounding value.
-    g                                            : List supported games.
-    g <game name>                                : Start playing the specified game.
-    bold / bolds                                 : Toggle bolding 1 and maximum dice values in dice results.
+    Command                                                    : Description
+    -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    bold / bolds                                               : Toggle bolding 1 and maximum dice values in dice results.
+    bs / sb / bottle / spin / bottlespin / spinbottle (<mode>) : Spin a bottle once to randomly generate a compass direction. An optional mode argument may be provided.
+	    mode: <none specified>                                 :     Generate a cardinal or ordinal / intercardinal direction. (E.g. north or northeast)
+		mode: c / cardinal                                     :     Generate a cardinal direction. (E.g. north)
+		mode: h / 16 / half                                    :     Generate a cardinal or ordinal direction or one of the eight half winds. (E.g. north, northeast, or north-northeast)
+    cf / fc / coin / flip / coinflip / flipcoin                : Flip a minimum of 1 or a maximum of 100 coins at once. (Value clamped to bounds.)
+    dd / don / dice / ddice / diceon / startdice               : Start Discord Dice and listen to commands.
+    doff / nodice / diceoff / stopdice                         : Stop Discord Dice and only listen for a start command.
+    g                                                          : List supported games.
+    g <game name>                                              : Start playing the specified game.
 
 Once a game has been started, to perform a dice roll send a message in any one of the following formats.
 `<roll>` stands for a game-specific roll message format described later.
@@ -26,7 +30,7 @@ All spaces in the commands below are optional: `r <roll>` and `r<roll>` are equi
      (<roll>)
      <roll>
 
-#### Supported Games ###
+### Supported Games ###
 Use these game names with the `!g` command.
 
     Name : Description
@@ -38,12 +42,12 @@ Use these game names with the `!g` command.
 A legend of symbols used in the message formats.
 If a value is given for a symbol that is smaller or greater than the specified minimum or maximum value, the given value is set the minimum or maximum value respectively.
 
-    Symbol   : Description
+    Symbol  : Description
     ----------------------
-    X        : Number of dice to roll. Minimum 1, maximum 600.
-    Y        : Number of faces on the die to roll. Minimum 2, no maximum limit. If less than 2 is given, 2 is used.
-    +Z / -Z  : Number to add or remove from the final roll result. No limits.
-    d        : Stands for the literal character 'd' or 'D'.
+    X       : Number of dice to roll. Minimum 1, maximum 600.
+    Y       : Number of faces on the die to roll. Minimum 2, no maximum limit. If less than 2 is given, 2 is used.
+    +Z / -Z : Number to add or remove from the final roll result. No limits.
+    d       : Stands for the literal character 'd' or 'D'.
 
 # Games #
 ## Standard Dice (stdd) ##
@@ -96,7 +100,7 @@ The full chat message for an advantage roll could be for example `/ a3d8` or `ra
     --------------------------
     ad20         : Roll two 20-sided dice and take the highest result. Final result will be between 1 and 20.
     a3d10-4      : Roll three 10-sided dice, take the highest result, and subtract four from it. Final result will be between -1 and 6.
-    
+
 ### Disadvantage Rolls ###
 Disadvantage rolls only take the lowest die result into the final result.
 The are done by prefixing the standard roll message with `d`. (Case in-sensitive.)
