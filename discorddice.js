@@ -1,7 +1,34 @@
+/*
+ * Miscellaneous.
+ */
 var Discord = require('discord.js');
 var fs = require('fs');
 
 var mybot = new Discord.Client();
+
+var config;
+var activeChannels = [];
+var minMaxBold = '**';
+
+// Unsupported.
+var tracker = {};
+var back = [];
+var forward = [];
+var output = '';
+var currentActors = [];
+var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
+var fateDeck = [];
+
+/*
+ * Games.
+ */
+
+// All regex matches are case insensitive.
+var regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
+
+var regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
+var regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
+//TODO: Eldritch.
 
 // var supportedGames = ['stdd','ex','or','sr','dnd','l5r','wod']
 // var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
@@ -9,38 +36,19 @@ var supportedGames = ['stdd', 'dnd']
 var supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
 var selectedGameIndex = -1;
 
-// All regex matches are case insensitive.
-var regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
-
-// Games.
-var regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
-var regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
-
 // Unsupported for now.
 var regexExalted = /^\d+?e/i;
 var regexWOD = /^\d+?w/i;
 var regexShadowrun = /^\d+?s/i;
 var regexL5R = /^\d+?k/i;
 var regexOneRing = /^\d+?r/i;
-// TODO: Eldritch.
 
-// Unit conversions.
+/*
+ * Unit conversions.
+ */
 var regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)/;
 var regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
 var regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
-
-var config;
-var tracker = {};
-var back = [];
-var forward = [];
-var output = '';
-var currentActors = [];
-var activeChannels = [];
-var minMaxBold = '**';
-var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
-var fateDeck = [];
-
-// Unit conversions.
 
 var lengthUnitSymbols = ['mm', 'cm', 'm', 'km', 'in', '"', "''", 'ft', "'", 'yd', 'mi'];
 
@@ -55,7 +63,9 @@ var ounceInGrams = 28.349523125;
 var poundInGrams = 453.59237;
 var stoneInGrams = 6350.29318;
 
-// Bottle spinning.
+/*
+ * Bottle spinning.
+ */
 var sixteenWindCompassArguments = ['h', '16', 'half'];
 var cardinalCompassArguments = ['c', 'cardinal'];
 var cardinalCompassDirections = ['north', 'east', 'south', 'west'];
@@ -63,7 +73,32 @@ var ordinalCompassDirections = ['north', 'northeast', 'east', 'southeast', 'sout
 var sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
 
 /*
- * NON-DICE STUFF
+ * Helper functions.
+ */
+/**
+ * Returns a random integer in range [min, max].
+ */
+var getRandomInt = function(min, max) {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+var getSupportedGamesString = function() {
+	var string = '';
+	var length = supportedGames.length;
+
+	supportedGamesNames.forEach(function(name, idx) {
+		string += name + ' (' + supportedGames[idx] + ')';
+
+		if (idx < length - 1) {
+			string += ', ';
+		}
+	});
+
+	return string;
+}
+
+/*
+ * ================ UNIT CONVERSIONS ================
  */
 var toFromMeters = function(value, unit, toMeters) {
 	var num = parseFloat(value);
@@ -189,17 +224,9 @@ var unitConversion = function(inputArray, toUnit) {
 	return outputText + " = " + result.toFixed(2) + " " + toUnit;
 }
 
-/**
- * Returns a random integer in range [min, max].
- */
-var getRandomInt = function(min, max) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 /*
  * ============= STANDARD DICE =============
  */
-
 var standardDice = function(rollerUsername, diceArray) {
 	// TODO: Refactor into a separate function for reuse.
 
@@ -374,6 +401,9 @@ var dndDice = function(rollerUsername, diceArray) {
 	return resultText;
 };
 
+/*
+ * ===================== OLD UNSUPPORTED STUFF =====================
+ */
 var shuffle = function(array) {
 	var currentIndex = array.length, temporaryValue, randomIndex;
 
@@ -1183,24 +1213,30 @@ var parseRoll = function(message, rollMessage) {
 }
 
 /*
+ * ===================== PARSE UNIT CONVERSION =====================
+ */
+var parseUnitConversion = function(message, inputString, toUnitSymbol) {
+	// Remove all whitespace.
+	// Convert to lower case.
+	// Replace commas with periods for floating point numbers.
+	// Split string by specific symbols.
+	// Capture said symbols.
+	// Remove the last element in the array which is empty.
+	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
+	console.log(data);
+	data.splice(data.length - 1, 1);
+	console.log(data);
+
+	var resultText = unitConversion(data, toUnitSymbol);
+
+	if (resultText) {
+		mybot.reply(message, resultText);
+	}
+};
+
+/*
  * ==================== DISCORD DICE COMMAND ====================
  */
-
-var getSupportedGamesString = function() {
-	var string = '';
-	var length = supportedGames.length;
-
-	supportedGamesNames.forEach(function(name, idx) {
-		string += name + ' (' + supportedGames[idx] + ')';
-
-		if (idx < length - 1) {
-			string += ', ';
-		}
-	});
-
-	return string;
-}
-
 var parseDiscordDiceCommand = function(message) {
 	var args = message.content.substring(1).toLowerCase().split(' ');
 	var msg;
@@ -1315,29 +1351,6 @@ var parseDiscordDiceCommand = function(message) {
 		mybot.reply(message, msg);
 	}
 }
-
-/*
- * ===================== PARSE UNIT CONVERSION =====================
- */
-
-var parseUnitConversion = function(message, inputString, toUnitSymbvol) {
-	// Remove all whitespace.
-	// Convert to lower case.
-	// Replace commas with periods for floating point numbers.
-	// Split string by specific symbols.
-	// Capture said symbols.
-	// Remove the last element in the array which is empty.
-	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
-	console.log(data);
-	data.splice(data.length - 1, 1);
-	console.log(data);
-
-	var resultText = unitConversion(data, toUnitSymbvol);
-
-	if (resultText) {
-		mybot.reply(message, resultText);
-	}
-};
 
 /*
  * ============ MAIN PROCESS ============
