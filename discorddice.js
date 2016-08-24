@@ -144,7 +144,7 @@ var toFromGrams = function(value, unit, toGrams) {
 }
 
 var unitConversion = function(inputArray, toUnit) {
-	console.log("Unit Conversion");
+	console.log("Unit Conversion: " + inputArray);
 
 	// Input array format: number, unit, number, unit, etc.
 	var length = inputArray.length;
@@ -155,8 +155,6 @@ var unitConversion = function(inputArray, toUnit) {
 
 	var inputBaseUnits = 0;
 	var outputText = "";
-
-	console.log("\tInput: " + inputArray);
 
 	for (var idx = 0; idx < length - 1; idx += 2) {
 		value = inputArray[idx];
@@ -1116,6 +1114,21 @@ var parseRoll = function(message, rollMessage) {
  * ==================== DISCORD DICE COMMAND ====================
  */
 
+var getSupportedGamesString = function() {
+	var string = "";
+	var length = supportedGames.length;
+
+	supportedGamesNames.forEach(function(name, idx) {
+		string += name + ' (' + supportedGames[idx] + ')';
+
+		if (idx < length - 1) {
+			string += ", ";
+		}
+	});
+
+	return string;
+}
+
 var parseDiscordDiceCommand = function(message) {
 	var args = message.content.substring(1).toLowerCase().split(' ');
 	var msg;
@@ -1123,6 +1136,7 @@ var parseDiscordDiceCommand = function(message) {
 	switch (args[0]) {
 		case 'dd':
 		case 'don':
+		case 'dice':
 		case 'ddice':
 		case 'diceon':
 		case 'startdice':
@@ -1134,20 +1148,27 @@ var parseDiscordDiceCommand = function(message) {
 			break;
 
 		case 'g':
-			if (supportedGames.indexOf(args[1]) > -1) {
-				selectedGameIndex = supportedGames.indexOf(args[1]);
-				msg = '<DD> Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+			if (activeChannels.indexOf(message.channel.id) !== -1) {
+				if (args.length > 1) {
+					if (supportedGames.indexOf(args[1]) > -1) {
+						selectedGameIndex = supportedGames.indexOf(args[1]);
+						msg = '<DD> Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 
-				if (activeChannels.indexOf(message.channel.id) === -1) {
-					activeChannels.push(message.channel.id);
-					console.log('<DD> Discord Dice enabled @ ' + message.channel.id);
+						if (activeChannels.indexOf(message.channel.id) === -1) {
+							activeChannels.push(message.channel.id);
+							console.log('<DD> Discord Dice enabled @ ' + message.channel.id);
+						}
+					} else {
+						msg = '<DD> Unknown game \'' + args[1] + '\'.';
+					}
+				} else {
+					msg = '<DD> Please specify one of the supported games: ' + getSupportedGamesString();
 				}
-			} else {
-				msg = '<DD> Unknown game \'' + args[1] + '\'.';
 			}
 			break;
 
 		case 'doff':
+		case 'nodice':
 		case 'diceoff':
 		case 'stopdice':
 			var index = activeChannels.indexOf(message.channel.id);
@@ -1162,15 +1183,18 @@ var parseDiscordDiceCommand = function(message) {
 
 		case 'bold':
 		case 'bolds':
-			msg = '<DD> Disabled bolding ones and maximum dice results.';
+			if (activeChannels.indexOf(message.channel.id) === -1) {
+				msg = '<DD> Disabled bolding ones and maximum dice results.';
 
-			if ('**' === minMaxBold) {
-				minMaxBold = '';
-			} else {
-				msg = '<DD> Enabled bolding ones and maximum dice results.';
-				minMaxBold = '**';
+				if ('**' === minMaxBold) {
+					minMaxBold = '';
+				} else {
+					msg = '<DD> Enabled bolding ones and maximum dice results.';
+					minMaxBold = '**';
+				}
 			}
 			break;
+
 		default:
 			msg = '<DD> Unknown command \'' + args[0] + '\'.';
 	}
@@ -1214,20 +1238,26 @@ var mainProcess = function() {
 		if (message.content.charAt(0) == '!') {
 			parseDiscordDiceCommand(message);
 		} else if (activeChannels.indexOf(message.channel.id) > -1) {
-			var rollMessage = regexRollMessage.exec(message.content);
+			// Else let regex do its magic.
+
 			var unitConversionMessage = regexConversion.exec(message.content);
 
-			// If the message matched the roll message regex.
-			if (rollMessage) {
+			// Only parse for roll messages of a game is selected.
+			if (selectedGameIndex !== -1) {
+				var rollMessage = regexRollMessage.exec(message.content);
+			}
+
+			if (unitConversionMessage) {
+				parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
+			} else if (rollMessage) {
 				if (rollMessage[1].charAt(0) === '!') {
 					initiativeHandler(message);
 				} else {
 					// Group 0 is the whole message, index 1 contains the actual roll message
 					parseRoll(message, rollMessage[1]);
 				}
-			} else if (unitConversionMessage) {
-				parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
 			}
+			// Else, normal chat message.
 		}
 	});
 
