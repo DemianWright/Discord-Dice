@@ -1,7 +1,7 @@
-var Discord = require('discord.js');
+var Discord = require('discord.io');
 var fs = require('fs');
 
-var mybot = new Discord.Client();
+var mybot;
 
 var config;
 var tracker = {};
@@ -170,6 +170,54 @@ var wodDice = function (message) {
 	}
 	successes += auto;
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
+};
+
+var owodDice = function (message) {
+	var dice = message.match(/([0-9]+)o/);
+	var diff = message.match(/o([0-9]+)/);
+	var auto = message.match(/(\+|-)([0-9]+)/);
+	var result;
+	var builder = '';
+	var successes = 0;
+	var sucDice = 0;
+	if (dice) {
+		dice = parseInt(dice[1], 10);
+	} else {
+		dice = 0;
+	}
+	if (diff) {
+		diff = parseInt(again[1], 10);
+	} else {
+		diff = 6;
+	}
+	if (auto) {
+		auto = parseInt(auto[0], 10);
+	} else {
+		auto = 0;
+	}
+	while (dice > 0) {
+		result = Math.floor(Math.random() * 10);
+		if (result === 0) {
+			result = 10;
+		}
+		if (result >= diff) {
+			successes += 1;
+		}
+		if (result === 1) {
+			successes -= 1;
+			builder += boldOnes + result + boldOnes;
+		} else  if (result >= diff) {
+			builder += '*' + result + '*';
+		} else {
+			builder += result;
+		}
+		dice -= 1;
+		if (dice > 0) {
+			builder += ',';
+		}
+	}
+	successes += auto;
+	return builder + '\n' + '**SUCCESSES: ' + successes + '**';
 };
 
 var baseDice = function (message) {
@@ -535,19 +583,19 @@ var l5rDice = function (message) {
 	return builder + '\n' + '**TOTAL: ' + final + '**';
 };
 
-var initiativeHandler = function (message) {
-	var raw = message.content.substr(1);
+var initiativeHandler = function (message, user) {
+	var raw = message.substr(1);
 	var parts = raw.split(' ');
 	var command = parts[0];
 	var highest = -9999999;
 	if (parts[1]) {
 		if (parts[1].toLowerCase() === 'me' || parts[1].toLowerCase() === 'my') {
-			parts[1] = message.author.username.replace(/ /g,'');
+			parts[1] = user.username.replace(/ /g,'');
 		}
 	}
 	if (parts[2]) {
 		if (parts[2].toLowerCase() === 'me' || parts[2].toLowerCase() === 'my') {
-			parts[2] = message.author.username.replace(/ /g,'');
+			parts[2] = user.username.replace(/ /g,'');
 		}
 	}
 	var sendMessage = function (msg) {
@@ -853,30 +901,38 @@ var initiativeHandler = function (message) {
 };
 
 var mainProcess = function () {
+	
 
-mybot.on('message', function(message) {
+ mybot = new Discord.Client({
+	 token: config.token,
+	 autorun: true
+ });
+
+mybot.on('message', function(user, userID, channelID, message) {
 	var result;
-	var msg = message.content.match(/\((.+)\)/) || message.content.match(/\/roll (.+)/);
-	if (message.content === '!startDice') {
-		if (activeChannels.indexOf(message.channel.id) === -1) {
-			activeChannels+=message.channel.id;
+	var msg = message.match(/\((.+)\)/) || message.match(/\/roll (.+)/);
+	if (message === '!startDice') {
+		if (activeChannels.indexOf(channelID) === -1) {
+			activeChannels+=channelID;
 			fs.writeFileSync('./config.json', JSON.stringify({discord:config, activeChannels:activeChannels}).replace(/\r?\n|\r/g,''));
 		}
-	} else if (message.content === '!stopDice') {
-		activeChannels = activeChannels.replace(message.channel.id,'');
+	} else if (message === '!stopDice') {
+		activeChannels = activeChannels.replace(channelID,'');
 		fs.writeFileSync('./config.json', JSON.stringify({discord:config, activeChannels:activeChannels}).replace(/\r?\n|\r/g,''));
-	} else if (message.content === '!boldOnes') {
+	} else if (message === '!boldOnes') {
 		if (boldOnes === '') {
 			boldOnes = '***';
 		} else {
 			boldOnes = '';
 		}
-	}else if (activeChannels.indexOf(message.channel.id) > -1) {
+	}else if (activeChannels.indexOf(channelID) > -1) {
 		if (msg) {
 			if (msg[1].match(/^[0-9]+?e/)) {
 				result = exaltedDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?w/)) {
 				result = wodDice(msg[1]);
+			} else if (msg[1].match(/^[0-9]+?o/)) {
+				result = owodDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?d/)) {
 				result = baseDice(msg[1]);
 			} else if (msg[1].match(/^[0-9]+?s/)) {
@@ -899,17 +955,17 @@ mybot.on('message', function(message) {
 				result = fateCount();
 			}
 			if (result) {
-				mybot.reply(message, result);
+				mybot.sendMessage({
+				    to: channelID,
+				    message: result
+				});
+				}
 			}
-		} else if (message.content.match(/^!/)) {
-			initiativeHandler(message);
+		} else if (message.match(/^!/)) {
+			initiativeHandler(message, user);
 		}
-	}
 });
-
-mybot.loginWithToken(config.token);
-
-};
+}
 
 if (!fs.existsSync('./config.json')) {
 	fs.writeFileSync('./config.json', JSON.stringify({discord:{token:'YOUR TOKEN'}}).replace(/\r?\n|\r/g,''));
