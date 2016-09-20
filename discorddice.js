@@ -75,6 +75,20 @@ var sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-nort
 /*
  * Helper functions.
  */
+
+/**
+ * Uses the bot the send a message to chat.
+ */
+var botMessage = function(channelID, messageText) {
+	// Message is not undefined, null, or contains only whitespace.
+	if (typeof messageText !== 'undefined' && messageText != null) {
+		mybot.sendMessage({
+			to : channelID,
+			message : messageText
+		});
+	}
+}
+
 /**
  * Returns a random integer in range [min, max].
  */
@@ -1330,7 +1344,7 @@ var bottleSpin = function(mode) {
 	} else if (cardinalCompassArguments.indexOf(mode) > -1) {
 		resultText += cardinalCompassDirections[getRandomInt(0, 3)] + '.';
 	} else {
-		resultText = "Invalid bottle spin mode, please use one of the following.\n\tCardinal directions: " + arrayToString(cardinalCompassArguments) + "\n\tCardinal or ordinal directions: *nothing*\n\tSixteen winds directions: " + arrayToString(sixteenWindCompassArguments); 
+		resultText = "Invalid bottle spin mode, please use one of the following.\n\tCardinal directions: " + arrayToString(cardinalCompassArguments) + "\n\tCardinal or ordinal directions: *nothing*\n\tSixteen winds directions: " + arrayToString(sixteenWindCompassArguments);
 	}
 
 	return resultText;
@@ -1364,7 +1378,7 @@ var coinFlip = function(count) {
 				resultText += ', ';
 			}
 		}
-		
+
 		resultText += '\nHeads: ' + headsCount + ' | Tails: ' + tailsCount;
 	} else {
 		resultText += Math.random() >= 0.5 ? 'Heads' : 'Tails';
@@ -1376,7 +1390,7 @@ var coinFlip = function(count) {
 /*
  * ========== PARSE ROLL ==========
  */
-var parseRoll = function(user, rollMessage) {
+var parseRoll = function(channelID, user, rollMessage) {
 	var resultText;
 	var rolls = rollMessage.split(',');
 
@@ -1385,6 +1399,7 @@ var parseRoll = function(user, rollMessage) {
 	var length = rolls.length;
 
 	console.log('rolls: ' + rolls);
+
 	for (var i = 0; i < length; i++) {
 		roll = rolls[i].trim();
 		console.log('roll: ' + roll);
@@ -1400,7 +1415,7 @@ var parseRoll = function(user, rollMessage) {
 				console.log('Unsupported game \'' + selectedGameIndex + '\' selected!');
 		}
 
-		return resultText;
+		botMessage(channelID, resultText);
 	}
 }
 
@@ -1578,18 +1593,17 @@ var mainProcess = function() {
 			if (unitConversionMessage) {
 				chatMessage = parseUnitConversion(unitConversionMessage[1], unitConversionMessage[2]);
 			} else if (rollMessage) {
-				// Group 0 is the whole message, index 1 contains the actual roll message
-				chatMessage = parseRoll(user, rollMessage[1]);
+				/*
+				 * Group 0 is the whole message, index 1 contains the actual roll message(s).
+				 * Doesn't return anything because there may be multiple rolls.
+				 */
+				parseRoll(channelID, user, rollMessage[1]);
 			}
 			// Else, normal chat message.
 		}
 
-		if (typeof chatMessage !== 'undefined') {
-			mybot.sendMessage({
-				to : channelID,
-				message : chatMessage
-			});
-		}
+		// Will not send anything if the message is undefined or empty.
+		botMessage(channelID, chatMessage);
 	});
 };
 
