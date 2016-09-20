@@ -82,6 +82,27 @@ var getRandomInt = function(min, max) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * Returns a string containing the elements of the array in a comma separated list.
+ */
+var arrayToString = function(array) {
+	var string = '';
+	var length = array.length;
+
+	array.forEach(function(item, idx) {
+		string += item;
+
+		if (idx < length - 1) {
+			string += ', ';
+		}
+	});
+
+	return string;
+}
+
+/**
+ * Returns a string containing the supported game names and their codes in a comma separated list.
+ */
 var getSupportedGamesString = function() {
 	var string = '';
 	var length = supportedGames.length;
@@ -1303,14 +1324,16 @@ var bottleSpin = function(mode) {
 	var resultText = 'The bottle points ';
 
 	if (typeof mode === 'undefined') {
-		resultText += ordinalCompassDirections[getRandomInt(0, 7)];
+		resultText += ordinalCompassDirections[getRandomInt(0, 7)] + '.';
 	} else if (sixteenWindCompassArguments.indexOf(mode) > -1) {
-		resultText += sixteenWindDirections[getRandomInt(0, 15)];
+		resultText += sixteenWindDirections[getRandomInt(0, 15)] + '.';
 	} else if (cardinalCompassArguments.indexOf(mode) > -1) {
-		resultText += cardinalCompassDirections[getRandomInt(0, 3)];
+		resultText += cardinalCompassDirections[getRandomInt(0, 3)] + '.';
+	} else {
+		resultText = "Invalid bottle spin mode, please use one of the following.\n\tCardinal directions: " + arrayToString(cardinalCompassArguments) + "\n\tCardinal or ordinal directions: *nothing*\n\tSixteen winds directions: " + arrayToString(sixteenWindCompassArguments); 
 	}
 
-	return resultText + '.';
+	return resultText;
 }
 
 /*
@@ -1321,29 +1344,30 @@ var coinFlip = function(count) {
 
 	var resultText = 'Coin Flip: ';
 
-	if (count > 1) {
+	// If count is greater than 1 or NaN.
+	if (Math.abs(count) > 1) {
 		resultText = 'Coin Flips: ';
-	}
 
-	var headsCount = 0;
-	var tailsCount = 0;
+		var headsCount = 0;
+		var tailsCount = 0;
 
-	for (var i = 0; i < count; i++) {
-		if (Math.random() >= 0.5) {
-			resultText += 'H';
-			headsCount++;
-		} else {
-			resultText += 'T';
-			tailsCount++;
+		for (var i = 0; i < count; i++) {
+			if (Math.random() >= 0.5) {
+				resultText += 'H';
+				headsCount++;
+			} else {
+				resultText += 'T';
+				tailsCount++;
+			}
+
+			if (i < count - 1) {
+				resultText += ', ';
+			}
 		}
-
-		if (i < count - 1) {
-			resultText += ', ';
-		}
-	}
-
-	if (count != 1) {
+		
 		resultText += '\nHeads: ' + headsCount + ' | Tails: ' + tailsCount;
+	} else {
+		resultText += Math.random() >= 0.5 ? 'Heads' : 'Tails';
 	}
 
 	return resultText;
@@ -1389,8 +1413,9 @@ var parseUnitConversion = function(inputString, toUnitSymbol) {
 	// Replace commas with periods for floating point numbers.
 	// Split string by specific symbols.
 	// Capture said symbols.
-	// Remove the last element in the array which is empty.
 	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
+
+	// Remove the last element in the array which is empty.
 	data.splice(data.length - 1, 1);
 
 	return unitConversion(data, toUnitSymbol);
