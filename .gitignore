@@ -1,5 +1,5 @@
 /.settings/
 /.project
-config.json
 .idea
-/temp.bat
+config.json
+*.bat

@@ -281,7 +281,7 @@ var standardDice = function(user, diceArray) {
 
 	total += intMod;
 
-	return resultText + '\n\t**' + user.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
+	return resultText + '\n\t**' + user.toUpperCase() + '** ROLLED  :  ' + diceMsg + ' = [ **' + total + '** ]';
 };
 
 /*
@@ -359,39 +359,39 @@ var dndDice = function(user, diceArray) {
 		}
 	}
 
-	resultText += '\n\t**' + user.toUpperCase() + ' ROLLED';
+	resultText += '\n\t**' + user.toUpperCase() + '** ROLLED ';
 
 	if (intMod === 0) {
 		switch (minMax) {
 			case 1:
-				resultText += ' W/** ***ADV.*** : `' + diceMsg + '` = `[ ' + maxDiceRoll + ' ]`';
+				resultText += 'W/ ADV.  :  `' + diceMsg + '` = `[ ' + maxDiceRoll + ' ]`';
 				console.log('\t= ' + maxDiceRoll);
 				break;
 			case -1:
-				resultText += ' W/** ***DISADV.*** : `' + diceMsg + '` = `[ ' + minDiceRoll + ' ]`';
+				resultText += 'W/ DISADV.  :  `' + diceMsg + '` = `[ ' + minDiceRoll + ' ]`';
 				console.log('\t= ' + minDiceRoll);
 				break;
 			default:
-				resultText += ' :** `' + diceMsg + '` = `[ ' + total + ' ]`';
+				resultText += ' :  `' + diceMsg + '` = `[ ' + total + ' ]`';
 				console.log('\t= ' + total);
 				break;
 		}
 	} else {
 		switch (minMax) {
 			case 1:
-				resultText += ' W/** ***ADV.*** : `' + diceMsg + '` ─> `' + maxDiceRoll + intModText + '`';
+				resultText += ' W/ ADV.  :  `' + diceMsg + '` ─> `' + maxDiceRoll + intModText + '`';
 				maxDiceRoll += intMod;
 				resultText += ' = `[ ' + maxDiceRoll + ' ]`';
 				console.log('\t= ' + maxDiceRoll);
 				break;
 			case -1:
-				resultText += ' W/** ***DISADV.*** : `' + diceMsg + '` ─> `' + minDiceRoll + intModText + '`';
+				resultText += ' W/ DISADV.  :  `' + diceMsg + '` ─> `' + minDiceRoll + intModText + '`';
 				minDiceRoll += intMod;
 				resultText += ' = `[ ' + minDiceRoll + ' ]`';
 				console.log('\t= ' + minDiceRoll);
 				break;
 			default:
-				resultText += ' :** `' + diceMsg + '` ─> `' + total + intModText + '`';
+				resultText += '  :  `' + diceMsg + '` ─> `' + total + intModText + '`';
 				total += intMod;
 				resultText += ' = `[ ' + total + ' ]`';
 				console.log('\t= ' + total);
@@ -1373,7 +1373,7 @@ var parseRoll = function(user, rollMessage) {
 				resultText = dndDice(user, roll.match(regexDND));
 				break;
 			default:
-				console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
+				console.log('Unsupported game \'' + selectedGameIndex + '\' selected!');
 		}
 
 		return resultText;
@@ -1383,7 +1383,7 @@ var parseRoll = function(user, rollMessage) {
 /*
  * ===================== PARSE UNIT CONVERSION =====================
  */
-var parseUnitConversion = function(message, inputString, toUnitSymbol) {
+var parseUnitConversion = function(inputString, toUnitSymbol) {
 	// Remove all whitespace.
 	// Convert to lower case.
 	// Replace commas with periods for floating point numbers.
@@ -1391,9 +1391,7 @@ var parseUnitConversion = function(message, inputString, toUnitSymbol) {
 	// Capture said symbols.
 	// Remove the last element in the array which is empty.
 	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
-	console.log(data);
 	data.splice(data.length - 1, 1);
-	console.log(data);
 
 	return unitConversion(data, toUnitSymbol);
 };
@@ -1401,9 +1399,9 @@ var parseUnitConversion = function(message, inputString, toUnitSymbol) {
 /*
  * ==================== DISCORD DICE COMMAND ====================
  */
-var parseDiscordDiceCommand = function(user, userID, channelID, message) {
+var parseDiscordDiceCommand = function(user, channelID, message) {
 	var args = message.substring(1).toLowerCase().split(' ');
-	var msg;
+	var msg = '';
 
 	switch (args[0]) {
 		case 'dd':
@@ -1420,8 +1418,8 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 					activeChannels : activeChannels
 				}).replace(/\r?\n|\r/g, ''));
 
-				console.log('<DD> ' + user + ' enabled Discord Dice @ ' + channelID);
-				msg = '<DD> Discord Dice enabled.';
+				console.log(user + ' enabled Discord Dice @ ' + channelID);
+				msg = 'Discord Dice enabled.';
 			}
 			break;
 
@@ -1430,17 +1428,19 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 				if (args.length > 1) {
 					if (supportedGames.indexOf(args[1]) > -1) {
 						selectedGameIndex = supportedGames.indexOf(args[1]);
-						msg = '<DD> Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+						msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 
 						if (activeChannels.indexOf(channelID) === -1) {
 							activeChannels += channelID;
-							console.log('<DD> ' + user + ' enabled Discord Dice @ ' + channelID);
+							console.log(user + ' enabled Discord Dice @ ' + channelID);
 						}
+
+						console.log(msg);
 					} else {
-						msg = '<DD> Unknown game \'' + args[1] + '\'.';
+						msg = 'Unknown game \'' + args[1] + '\'.';
 					}
 				} else {
-					msg = '<DD> Please specify one of the supported games: ' + getSupportedGamesString();
+					msg = 'Please specify one of the supported games: ' + getSupportedGamesString();
 				}
 			}
 			break;
@@ -1452,19 +1452,16 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 			var index = activeChannels.indexOf(channelID);
 
 			if (index !== -1) {
-				console.log('<DD> Channel ID: ' + channelID);
+				console.log('Channel ID: ' + channelID);
 
 				if (selectedGameIndex !== -1) {
-					msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
-
-					mybot.sendMessage({
-						to : channelID,
-						message : msg
-					});
+					msg = 'Stopped playing ' + supportedGamesNames[selectedGameIndex] + " dice.\n";
 				}
 
-				activeChannels = activeChannels.replace(channelID,'');
-				msg = '<DD> Discord Dice disabled.';
+				activeChannels = activeChannels.replace(channelID, '');
+				msg += 'Discord Dice disabled.';
+
+				console.log(msg);
 
 				fs.writeFileSync('./config.json', JSON.stringify({
 					discord : config,
@@ -1472,15 +1469,16 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 				}).replace(/\r?\n|\r/g, ''));
 			}
 			break;
+
 		case 'bold':
 		case 'bolds':
 			if (activeChannels.indexOf(channelID) === -1) {
-				msg = '<DD> Disabled bolding ones and maximum dice results.';
+				msg = 'Disabled bolding ones and maximum dice results.';
 
 				if ('**' === minMaxBold) {
 					minMaxBold = '';
 				} else {
-					msg = '<DD> Enabled bolding ones and maximum dice results.';
+					msg = 'Enabled bolding ones and maximum dice results.';
 					minMaxBold = '**';
 				}
 			}
@@ -1505,7 +1503,7 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 					count = count > 100 ? 100 : count;
 				}
 
-				msg = coinFlip(message, count);
+				msg = coinFlip(count);
 			}
 			break;
 
@@ -1516,12 +1514,12 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 		case 'bottlespin':
 		case 'spinbottle':
 			if (activeChannels.indexOf(channelID) !== -1) {
-				msg = bottleSpin(message, args[1]);
+				msg = bottleSpin(args[1]);
 			}
 			break;
 
 		default:
-			msg = '<DD> Unknown command \'' + args[0] + '\'.';
+			msg = 'Unknown command \'' + args[0] + '\'.';
 	}
 
 	return msg;
@@ -1530,7 +1528,6 @@ var parseDiscordDiceCommand = function(user, userID, channelID, message) {
 /*
  * ============ MAIN PROCESS ============
  */
-
 var mainProcess = function() {
 	mybot = new Discord.Client({
 		token : config.token,
@@ -1539,13 +1536,13 @@ var mainProcess = function() {
 
 	mybot.on('message', function(user, userID, channelID, message) {
 		var chatMessage;
-		
+
 		// Is the message a Discord Dice command?
 		if (message.charAt(0) == '!') {
-			chatMessage = parseDiscordDiceCommand(user, userID, channelID, message);
+			chatMessage = parseDiscordDiceCommand(user, channelID, message);
 		} else if (activeChannels.indexOf(channelID) > -1) {
 			// Else let regex do its magic.
-			
+
 			var unitConversionMessage = regexConversion.exec(message);
 
 			// Only parse for roll messages of a game is selected.
@@ -1554,26 +1551,21 @@ var mainProcess = function() {
 			}
 
 			if (unitConversionMessage) {
-				chatMessage = parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
+				chatMessage = parseUnitConversion(unitConversionMessage[1], unitConversionMessage[2]);
 			} else if (rollMessage) {
 				// Group 0 is the whole message, index 1 contains the actual roll message
-				chatMessage = parseRoll(user, message, rollMessage[1]);
+				chatMessage = parseRoll(user, rollMessage[1]);
 			}
 			// Else, normal chat message.
 		}
 
-		
 		if (typeof chatMessage !== 'undefined') {
-			console.log(chatMessage);
-
 			mybot.sendMessage({
 				to : channelID,
 				message : chatMessage
 			});
 		}
 	});
-
-	console.log('<DD> Ready.');
 };
 
 if (!fs.existsSync('./config.json')) {
