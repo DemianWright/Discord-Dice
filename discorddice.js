@@ -1,10 +1,10 @@
 /*
  * Miscellaneous.
  */
-var Discord = require('discord.js');
+var Discord = require('discord.io');
 var fs = require('fs');
 
-var mybot = new Discord.Client();
+var mybot;
 
 var config;
 var activeChannels = [];
@@ -28,7 +28,7 @@ var regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
 
 var regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
 var regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
-//TODO: Eldritch.
+// TODO: Eldritch.
 
 // var supportedGames = ['stdd','ex','or','sr','dnd','l5r','wod']
 // var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
@@ -227,7 +227,7 @@ var unitConversion = function(inputArray, toUnit) {
 /*
  * ============= STANDARD DICE =============
  */
-var standardDice = function(rollerUsername, diceArray) {
+var standardDice = function(user, diceArray) {
 	// TODO: Refactor into a separate function for reuse.
 
 	console.log('Standard Dice: ' + diceArray);
@@ -258,7 +258,7 @@ var standardDice = function(rollerUsername, diceArray) {
 	intMod = isNaN(intMod) ? 0 : intMod;
 
 	var diceMsg = diceCount + 'd' + diceSize + '' + (intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod))
-	console.log(rollerUsername + ' rolls: ' + diceMsg);
+	console.log(user + ' rolls: ' + diceMsg);
 
 	while (diceCount > 0) {
 		diceRoll = getRandomInt(1, diceSize);
@@ -281,13 +281,13 @@ var standardDice = function(rollerUsername, diceArray) {
 
 	total += intMod;
 
-	return resultText + '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
+	return resultText + '\n\t**' + user.toUpperCase() + ' ROLLED:** ' + diceMsg + ' = [ **' + total + '** ]';
 };
 
 /*
  * ======== DND DICE ========
  */
-var dndDice = function(rollerUsername, diceArray) {
+var dndDice = function(user, diceArray) {
 	console.log('DnD Dice: ' + diceArray);
 
 	if (!diceArray) {
@@ -333,7 +333,7 @@ var dndDice = function(rollerUsername, diceArray) {
 	diceCount = minMax === 0 ? diceCount : (diceCount === 1 ? 2 : diceCount);
 
 	var diceMsg = (undefined === diceArray[1] ? '' : diceArray[1]) + diceCount + 'd' + diceSize + '' + intModText;
-	console.log(rollerUsername + ' rolls: ' + diceMsg);
+	console.log(user + ' rolls: ' + diceMsg);
 
 	while (diceCount > 0) {
 		diceRoll = getRandomInt(1, diceSize);
@@ -359,7 +359,7 @@ var dndDice = function(rollerUsername, diceArray) {
 		}
 	}
 
-	resultText += '\n\t**' + rollerUsername.toUpperCase() + ' ROLLED';
+	resultText += '\n\t**' + user.toUpperCase() + ' ROLLED';
 
 	if (intMod === 0) {
 		switch (minMax) {
@@ -562,6 +562,93 @@ var wodDice = function(message) {
 	return builder + '\n' + '**SUCCESSES: ' + successes + '(' + sucDice + ')**';
 };
 
+var owodDice = function(message) {
+	var dice = message.match(/([0-9]+)o/);
+	var diff = message.match(/o([0-9]+)/);
+	var auto = message.match(/(\+|-)([0-9]+)/);
+	var result;
+	var builder = '';
+	var successes = 0;
+	var sucDice = 0;
+	if (dice) {
+		dice = parseInt(dice[1], 10);
+	} else {
+		dice = 0;
+	}
+	if (diff) {
+		diff = parseInt(again[1], 10);
+	} else {
+		diff = 6;
+	}
+	if (auto) {
+		auto = parseInt(auto[0], 10);
+	} else {
+		auto = 0;
+	}
+	while (dice > 0) {
+		result = Math.floor(Math.random() * 10);
+		if (result === 0) {
+			result = 10;
+		}
+		if (result >= diff) {
+			successes += 1;
+		}
+		if (result === 1) {
+			successes -= 1;
+			builder += boldOnes + result + boldOnes;
+		} else if (result >= diff) {
+			builder += '*' + result + '*';
+		} else {
+			builder += result;
+		}
+		dice -= 1;
+		if (dice > 0) {
+			builder += ',';
+		}
+	}
+	successes += auto;
+	return builder + '\n' + '**SUCCESSES: ' + successes + '**';
+};
+
+var baseDice = function(message) {
+	var dice;
+	var diceSize;
+	var total = 0;
+	var builder = '';
+	var result;
+	var parts = message.split('+')
+	parts.forEach(function(part, index) {
+		dice = part.match(/([0-9]+)d([0-9]+)/);
+		if (dice) {
+			diceSize = parseInt(dice[2], 10);
+			dice = parseInt(dice[1], 10);
+		} else {
+			dice = 0;
+			total += parseInt(part);
+		}
+		while (dice > 0) {
+			result = Math.floor(Math.random() * diceSize);
+			if (result === 0) {
+				result = diceSize;
+			}
+			if (result === 1) {
+				builder += boldOnes + result + boldOnes;
+			} else if (result === diceSize) {
+				builder += '**' + result + '**';
+			} else {
+				builder += result;
+			}
+			total += result;
+			dice -= 1;
+			if (dice > 0 || index < parts.length - 1) {
+				builder += ',';
+			}
+		}
+	});
+
+	return builder + '\n' + '**TOTAL: ' + total + '**';
+};
+
 var fudgeDice = function() {
 	var dice = 4;
 	var diceSize = 3;
@@ -725,6 +812,93 @@ var oneRingDice = function(message) {
 	})() + '**';
 };
 
+var starWarsDice = function(message) {
+	var dice = message.match(/sw([a-zA-Z]+)/);
+	var result;
+	var results = {};
+	var builder = '';
+	var dieTypes = {
+		b : ['', '', 's', 'sa', 'aa', 'a'],
+		s : ['', '', 'f', 'f', 't', 't'],
+		a : ['', 's', 's', 'ss', 'a', 'a', 'as', 'aa'],
+		d : ['', 'f', 'ff', 't', 't', 't', 'tt', 'ft'],
+		p : ['', 's', 's', 'ss', 'ss', 'a', 'as', 'as', 'as', 'aa', 'aa', 'r'],
+		c : ['', 'f', 'f', 'ff', 'ff', 't', 't', 'ft', 'ft', 'tt', 'tt', 'e'],
+		f : ['d', 'd', 'd', 'd', 'd', 'd', 'dd', 'l', 'l', 'll', 'll', 'll']
+	}
+	if (dice) {
+		dice = dice[1].split('');
+	}
+	while (dice.length > 0) {
+		result = Math.floor(Math.random() * dieTypes[dice[0]].length);
+		result = dieTypes[dice[0]][result].split('');
+
+		result.forEach(function(r) {
+			switch (r) {
+				case 's':
+					if (!results.successes) {
+						results.successes = 1;
+					} else {
+						results.successes += 1;
+					}
+					break;
+				case 'a':
+					if (!results.advantages) {
+						results.advantages = 1;
+					} else {
+						results.advantages += 1;
+					}
+					break;
+				case 'r':
+					if (!results.triumphs) {
+						results.triumphs = 1;
+					} else {
+						results.triumphs += 1;
+					}
+					break;
+				case 'f':
+					if (!results.failures) {
+						results.failures = 1;
+					} else {
+						results.failures += 1;
+					}
+					break;
+				case 't':
+					if (!results.threats) {
+						results.threats = 1;
+					} else {
+						results.threats += 1;
+					}
+					break;
+				case 'e':
+					if (!results.despirs) {
+						results.despairs = 1;
+					} else {
+						results.despairs += 1;
+					}
+					break;
+				case 'l':
+					if (!results.light) {
+						results.light = 1;
+					} else {
+						results.light += 1;
+					}
+					break;
+				case 'd':
+					if (!results.light) {
+						results.light = 1;
+					} else {
+						results.light += 1;
+					}
+					break;
+			}
+		});
+
+		dice.shift();
+	}
+	return JSON.stringify(results, null, 4).replace('{', '').replace('\n}', '').replace(/"/g, '');
+};
+
 var l5rDice = function(message) {
 	var dice = message.match(/([0-9]+)k/);
 	var keep = message.match(/k([0-9]+)/);
@@ -802,19 +976,19 @@ var l5rDice = function(message) {
 	return builder + '\n' + '**TOTAL: ' + final + '**';
 };
 
-var initiativeHandler = function(message) {
-	var raw = message.content.substr(1);
+var initiativeHandler = function(message, user) {
+	var raw = message.substr(1);
 	var parts = raw.split(' ');
 	var command = parts[0];
 	var highest = -9999999;
 	if (parts[1]) {
 		if (parts[1].toLowerCase() === 'me' || parts[1].toLowerCase() === 'my') {
-			parts[1] = message.author.username.replace(/ /g, '');
+			parts[1] = user.username.replace(/ /g, '');
 		}
 	}
 	if (parts[2]) {
 		if (parts[2].toLowerCase() === 'me' || parts[2].toLowerCase() === 'my') {
-			parts[2] = message.author.username.replace(/ /g, '');
+			parts[2] = user.username.replace(/ /g, '');
 		}
 	}
 	var sendMessage = function(msg) {
@@ -1123,7 +1297,7 @@ var initiativeHandler = function(message) {
 /*
  * =========== BOTTLE SPIN ===========
  */
-var bottleSpin = function(message, mode) {
+var bottleSpin = function(mode) {
 	console.log('Bottle Spin, mode: ' + mode);
 
 	var resultText = 'The bottle points ';
@@ -1136,15 +1310,13 @@ var bottleSpin = function(message, mode) {
 		resultText += cardinalCompassDirections[getRandomInt(0, 3)];
 	}
 
-	if (resultText) {
-		mybot.reply(message, resultText + '.');
-	}
+	return resultText + '.';
 }
 
 /*
  * ========= COIN FLIP =========
  */
-var coinFlip = function(message, count) {
+var coinFlip = function(count) {
 	console.log('Coin Flip: ' + count);
 
 	var resultText = 'Coin Flip: ';
@@ -1174,15 +1346,13 @@ var coinFlip = function(message, count) {
 		resultText += '\nHeads: ' + headsCount + ' | Tails: ' + tailsCount;
 	}
 
-	if (resultText) {
-		mybot.reply(message, resultText);
-	}
+	return resultText;
 }
 
 /*
  * ========== PARSE ROLL ==========
  */
-var parseRoll = function(message, rollMessage) {
+var parseRoll = function(user, rollMessage) {
 	var resultText;
 	var rolls = rollMessage.split(',');
 
@@ -1197,18 +1367,16 @@ var parseRoll = function(message, rollMessage) {
 
 		switch (selectedGameIndex) {
 			case 0:
-				resultText = standardDice(message.author.username, roll.match(regexStdD));
+				resultText = standardDice(user, roll.match(regexStdD));
 				break;
 			case 1:
-				resultText = dndDice(message.author.username, roll.match(regexDND));
+				resultText = dndDice(user, roll.match(regexDND));
 				break;
 			default:
 				console.log('<DD> Unsupported game \'' + selectedGameIndex + '\' selected!');
 		}
 
-		if (resultText) {
-			mybot.reply(message, resultText);
-		}
+		return resultText;
 	}
 }
 
@@ -1227,18 +1395,14 @@ var parseUnitConversion = function(message, inputString, toUnitSymbol) {
 	data.splice(data.length - 1, 1);
 	console.log(data);
 
-	var resultText = unitConversion(data, toUnitSymbol);
-
-	if (resultText) {
-		mybot.reply(message, resultText);
-	}
+	return unitConversion(data, toUnitSymbol);
 };
 
 /*
  * ==================== DISCORD DICE COMMAND ====================
  */
-var parseDiscordDiceCommand = function(message) {
-	var args = message.content.substring(1).toLowerCase().split(' ');
+var parseDiscordDiceCommand = function(user, userID, channelID, message) {
+	var args = message.substring(1).toLowerCase().split(' ');
 	var msg;
 
 	switch (args[0]) {
@@ -1248,23 +1412,29 @@ var parseDiscordDiceCommand = function(message) {
 		case 'ddice':
 		case 'diceon':
 		case 'startdice':
-			if (activeChannels.indexOf(message.channel.id) === -1) {
-				activeChannels.push(message.channel.id);
-				console.log('<DD> Channel ID: ' + message.channel.id);
+			if (activeChannels.indexOf(channelID) === -1) {
+				activeChannels += channelID;
+
+				fs.writeFileSync('./config.json', JSON.stringify({
+					discord : config,
+					activeChannels : activeChannels
+				}).replace(/\r?\n|\r/g, ''));
+
+				console.log('<DD> ' + user + ' enabled Discord Dice @ ' + channelID);
 				msg = '<DD> Discord Dice enabled.';
 			}
 			break;
 
 		case 'g':
-			if (activeChannels.indexOf(message.channel.id) !== -1) {
+			if (activeChannels.indexOf(channelID) !== -1) {
 				if (args.length > 1) {
 					if (supportedGames.indexOf(args[1]) > -1) {
 						selectedGameIndex = supportedGames.indexOf(args[1]);
 						msg = '<DD> Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 
-						if (activeChannels.indexOf(message.channel.id) === -1) {
-							activeChannels.push(message.channel.id);
-							console.log('<DD> Discord Dice enabled @ ' + message.channel.id);
+						if (activeChannels.indexOf(channelID) === -1) {
+							activeChannels += channelID;
+							console.log('<DD> ' + user + ' enabled Discord Dice @ ' + channelID);
 						}
 					} else {
 						msg = '<DD> Unknown game \'' + args[1] + '\'.';
@@ -1279,24 +1449,32 @@ var parseDiscordDiceCommand = function(message) {
 		case 'nodice':
 		case 'diceoff':
 		case 'stopdice':
-			var index = activeChannels.indexOf(message.channel.id);
+			var index = activeChannels.indexOf(channelID);
 
 			if (index !== -1) {
-				console.log('<DD> Channel ID: ' + message.channel.id);
+				console.log('<DD> Channel ID: ' + channelID);
 
 				if (selectedGameIndex !== -1) {
 					msg = '<DD> Stopped playing ' + supportedGamesNames[selectedGameIndex] + ' dice.';
-					mybot.reply(message, msg);
+
+					mybot.sendMessage({
+						to : channelID,
+						message : msg
+					});
 				}
 
-				activeChannels.splice(index, 1);
+				activeChannels = activeChannels.replace(channelID,'');
 				msg = '<DD> Discord Dice disabled.';
+
+				fs.writeFileSync('./config.json', JSON.stringify({
+					discord : config,
+					activeChannels : activeChannels
+				}).replace(/\r?\n|\r/g, ''));
 			}
 			break;
-
 		case 'bold':
 		case 'bolds':
-			if (activeChannels.indexOf(message.channel.id) === -1) {
+			if (activeChannels.indexOf(channelID) === -1) {
 				msg = '<DD> Disabled bolding ones and maximum dice results.';
 
 				if ('**' === minMaxBold) {
@@ -1314,7 +1492,7 @@ var parseDiscordDiceCommand = function(message) {
 		case 'flip':
 		case 'coinflip':
 		case 'flipcoin':
-			if (activeChannels.indexOf(message.channel.id) !== -1) {
+			if (activeChannels.indexOf(channelID) !== -1) {
 				var count = 1;
 
 				if (args.length > 1) {
@@ -1337,7 +1515,7 @@ var parseDiscordDiceCommand = function(message) {
 		case 'spin':
 		case 'bottlespin':
 		case 'spinbottle':
-			if (activeChannels.indexOf(message.channel.id) !== -1) {
+			if (activeChannels.indexOf(channelID) !== -1) {
 				msg = bottleSpin(message, args[1]);
 			}
 			break;
@@ -1346,10 +1524,7 @@ var parseDiscordDiceCommand = function(message) {
 			msg = '<DD> Unknown command \'' + args[0] + '\'.';
 	}
 
-	if (typeof msg !== 'undefined') {
-		console.log(msg);
-		mybot.reply(message, msg);
-	}
+	return msg;
 }
 
 /*
@@ -1357,70 +1532,72 @@ var parseDiscordDiceCommand = function(message) {
  */
 
 var mainProcess = function() {
-	mybot.on('message', function(message) {
-		// Is the message a Discord Dice command?
-		if (message.content.charAt(0) == '!') {
-			parseDiscordDiceCommand(message);
-		} else if (activeChannels.indexOf(message.channel.id) > -1) {
-			// Else let regex do its magic.
+	mybot = new Discord.Client({
+		token : config.token,
+		autorun : true
+	});
 
-			var unitConversionMessage = regexConversion.exec(message.content);
+	mybot.on('message', function(user, userID, channelID, message) {
+		var chatMessage;
+		
+		// Is the message a Discord Dice command?
+		if (message.charAt(0) == '!') {
+			chatMessage = parseDiscordDiceCommand(user, userID, channelID, message);
+		} else if (activeChannels.indexOf(channelID) > -1) {
+			// Else let regex do its magic.
+			
+			var unitConversionMessage = regexConversion.exec(message);
 
 			// Only parse for roll messages of a game is selected.
 			if (selectedGameIndex !== -1) {
-				var rollMessage = regexRollMessage.exec(message.content);
+				var rollMessage = regexRollMessage.exec(message);
 			}
 
 			if (unitConversionMessage) {
-				parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
+				chatMessage = parseUnitConversion(message, unitConversionMessage[1], unitConversionMessage[2]);
 			} else if (rollMessage) {
-				if (rollMessage[1].charAt(0) === '!') {
-					initiativeHandler(message);
-				} else {
-					// Group 0 is the whole message, index 1 contains the actual roll message
-					parseRoll(message, rollMessage[1]);
-				}
+				// Group 0 is the whole message, index 1 contains the actual roll message
+				chatMessage = parseRoll(user, message, rollMessage[1]);
 			}
 			// Else, normal chat message.
 		}
+
+		
+		if (typeof chatMessage !== 'undefined') {
+			console.log(chatMessage);
+
+			mybot.sendMessage({
+				to : channelID,
+				message : chatMessage
+			});
+		}
 	});
 
-	mybot.login(config.email, config.password);
 	console.log('<DD> Ready.');
 };
 
 if (!fs.existsSync('./config.json')) {
 	fs.writeFileSync('./config.json', JSON.stringify({
 		discord : {
-			email : 'YOUR EMAIL',
-			password : 'YOUR PASSWORD'
+			token : 'YOUR TOKEN'
 		}
 	}).replace(/\r?\n|\r/g, ''));
 }
 
 config = require('./config.json').discord;
+activeChannels = require('./config.json').activeChannels || '';
 
-if (config.email === 'YOUR EMAIL') {
+if (config.token === 'YOUR TOKEN') {
 	var pw = true;
 	process.stdin.resume();
 	process.stdin.setEncoding('utf8');
-	console.log('Enter your Discord Email Login: ');
-	process.stdin.on('data', function(email) {
-		if (pw) {
-			pw = false;
-			console.log('Enter your Discord Password: ');
-		}
-		process.stdin.on('data', function(password) {
-			process.stdin.on('data', function() {
-			});
-			process.stdin.pause();
-			config.email = email.replace(/\r?\n|\r/g, '');
-			config.password = password.replace(/\r?\n|\r/g, '');
-			fs.writeFileSync('./config.json', JSON.stringify({
-				discord : config
-			}).replace(/\r?\n|\r/g, ''));
-			mainProcess();
-		});
+	console.log('Enter your Discord Bot Token: ');
+	process.stdin.on('data', function(token) {
+		config.token = token.replace(/\r?\n|\r/g, '');
+		fs.writeFileSync('./config.json', JSON.stringify({
+			discord : config
+		}).replace(/\r?\n|\r/g, ''));
+		mainProcess();
 	});
 } else {
 	mainProcess();
