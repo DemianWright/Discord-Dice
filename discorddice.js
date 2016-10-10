@@ -1,8 +1,8 @@
 /*
  * Miscellaneous.
  */
-var Discord = require('discord.io');
-var fs = require('fs');
+const Discord = require('discord.io');
+const fs = require('fs');
 
 var mybot;
 
@@ -24,53 +24,69 @@ var fateDeck = [];
  */
 
 // All regex matches are case insensitive.
-var regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
+const regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
 
-var regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
-var regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
+const regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
+const regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
 // TODO: Eldritch.
 
 // var supportedGames = ['stdd','ex','or','sr','dnd','l5r','wod']
 // var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
-var supportedGames = ['stdd', 'dnd']
-var supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
+const gidxStdd = 0;
+const gidxDnd = 1;
+const supportedGames = ['stdd', 'dnd']
+const supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
+
 var selectedGameIndex = -1;
 
 // Unsupported for now.
-var regexExalted = /^\d+?e/i;
-var regexWOD = /^\d+?w/i;
-var regexShadowrun = /^\d+?s/i;
-var regexL5R = /^\d+?k/i;
-var regexOneRing = /^\d+?r/i;
+const regexExalted = /^\d+?e/i;
+const regexWOD = /^\d+?w/i;
+const regexShadowrun = /^\d+?s/i;
+const regexL5R = /^\d+?k/i;
+const regexOneRing = /^\d+?r/i;
 
 /*
  * Unit conversions.
  */
-var regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)/;
-var regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
-var regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
+const regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)/;
+const regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
+const regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
 
-var lengthUnitSymbols = ['mm', 'cm', 'm', 'km', 'in', '"', "''", 'ft', "'", 'yd', 'mi'];
+const lengthUnitSymbols = ['mm', 'cm', 'm', 'km', 'in', '"', "''", 'ft', "'", 'yd', 'mi'];
 
-var inchInMmeters = 0.0254;
-var footInMeters = 0.3048;
-var yardInMeters = 0.9144;
-var mileInMeters = 1609.344;
+const inchInMmeters = 0.0254;
+const footInMeters = 0.3048;
+const yardInMeters = 0.9144;
+const mileInMeters = 1609.344;
 
-var weigthUnitSymbols = ['mg', 'g', 'kg', 'oz', 'lb', 'st'];
+const weigthUnitSymbols = ['mg', 'g', 'kg', 'oz', 'lb', 'st'];
 
-var ounceInGrams = 28.349523125;
-var poundInGrams = 453.59237;
-var stoneInGrams = 6350.29318;
+const ounceInGrams = 28.349523125;
+const poundInGrams = 453.59237;
+const stoneInGrams = 6350.29318;
 
 /*
  * Bottle spinning.
  */
-var sixteenWindCompassArguments = ['h', '16', 'half'];
-var cardinalCompassArguments = ['c', 'cardinal'];
-var cardinalCompassDirections = ['north', 'east', 'south', 'west'];
-var ordinalCompassDirections = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
-var sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
+const sixteenWindCompassArguments = ['h', '16', 'half'];
+const cardinalCompassArguments = ['c', 'cardinal'];
+const cardinalCompassDirections = ['north', 'east', 'south', 'west'];
+const ordinalCompassDirections = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
+const sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
+
+/*
+ * DnD
+ */
+
+var recordInitiative = false;
+var initiatives;
+
+/*
+ * Other features.
+ */
+
+const gamesSupportingInitiatives = [gidxDnd];
 
 /*
  * Helper functions.
@@ -79,7 +95,7 @@ var sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-nort
 /**
  * Uses the bot the send a message to chat.
  */
-var botMessage = function(channelID, messageText) {
+const botMessage = function(channelID, messageText) {
 	// Message is not undefined, null, or contains only whitespace.
 	if (typeof messageText !== 'undefined' && messageText != null) {
 		mybot.sendMessage({
@@ -92,16 +108,16 @@ var botMessage = function(channelID, messageText) {
 /**
  * Returns a random integer in range [min, max].
  */
-var getRandomInt = function(min, max) {
+const getRandomInt = function(min, max) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 /**
  * Returns a string containing the elements of the array in a comma separated list.
  */
-var arrayToString = function(array) {
+const arrayToString = function(array) {
 	var string = '';
-	var length = array.length;
+	const length = array.length;
 
 	array.forEach(function(item, idx) {
 		string += item;
@@ -115,19 +131,32 @@ var arrayToString = function(array) {
 }
 
 /**
- * Returns a string containing the supported game names and their codes in a comma separated list.
+ * Returns a string containing the names and codes of the specified games in a comma separated list.
  */
-var getSupportedGamesString = function() {
+const toGameList = function(arrayOfGameIndices) {
 	var string = '';
-	var length = supportedGames.length;
+	
+	if (arrayOfGameIndices === null) {
+		var length = supportedGames.length;
 
-	supportedGamesNames.forEach(function(name, idx) {
-		string += name + ' (' + supportedGames[idx] + ')';
+		supportedGames.forEach(function(code, idx) {
+			string += supportedGamesNames[idx] + ' (' + code + ')';
 
-		if (idx < length - 1) {
-			string += ', ';
-		}
-	});
+			if (idx < length - 1) {
+				string += ', ';
+			}
+		});
+	} else{
+		var length = arrayOfGameIndices.length;
+		
+		arrayOfGameIndices.forEach(function(gidx, idx) {
+			string += supportedGamesNames[gidx] + ' (' + supportedGames[gidx] + ')';
+
+			if (idx < length - 1) {
+				string += ', ';
+			}
+		});
+	}
 
 	return string;
 }
@@ -135,8 +164,8 @@ var getSupportedGamesString = function() {
 /*
  * ================ UNIT CONVERSIONS ================
  */
-var toFromMeters = function(value, unit, toMeters) {
-	var num = parseFloat(value);
+const toFromMeters = function(value, unit, toMeters) {
+	const num = parseFloat(value);
 
 	// Lazy but it works.
 
@@ -184,8 +213,8 @@ var toFromMeters = function(value, unit, toMeters) {
 	}
 }
 
-var toFromGrams = function(value, unit, toGrams) {
-	var num = parseFloat(value);
+const toFromGrams = function(value, unit, toGrams) {
+	const num = parseFloat(value);
 
 	// Lazy but it works.
 
@@ -220,12 +249,12 @@ var toFromGrams = function(value, unit, toGrams) {
 	}
 }
 
-var unitConversion = function(inputArray, toUnit) {
+const unitConversion = function(inputArray, toUnit) {
 	console.log("Unit Conversion: " + inputArray);
 
 	// Input array format: number, unit, number, unit, etc.
-	var length = inputArray.length;
-	var lengths = lengthUnitSymbols.indexOf(toUnit) > -1;
+	const length = inputArray.length;
+	const lengths = lengthUnitSymbols.indexOf(toUnit) > -1;
 
 	var value = 0;
 	var unit = "";
@@ -262,7 +291,7 @@ var unitConversion = function(inputArray, toUnit) {
 /*
  * ============= STANDARD DICE =============
  */
-var standardDice = function(user, diceArray) {
+const standardDice = function(user, diceArray) {
 	// TODO: Refactor into a separate function for reuse.
 
 	console.log('Standard Dice: ' + diceArray);
@@ -322,7 +351,29 @@ var standardDice = function(user, diceArray) {
 /*
  * ======== DND DICE ========
  */
-var dndDice = function(user, diceArray) {
+const initiativesSorter = function(a, b) {
+	// Largest first.
+	return b[0] - a[0]
+}
+
+const getInitiatives = function() {
+	var output = '**INITIATIVES**\n';
+	const length = initiatives.length;
+
+	if (length > 0) {
+		initiatives.sort(initiativesSorter);
+
+		initiatives.forEach(function(item, idx) {
+			output += item[0] + ': ' + item[1] + "\n";
+		});		
+	} else {
+		output += '–';
+	}
+
+	return output;
+}
+
+const dndDice = function(user, diceArray) {
 	console.log('DnD Dice: ' + diceArray);
 
 	if (!diceArray) {
@@ -358,9 +409,9 @@ var dndDice = function(user, diceArray) {
 	// Push the minimum result to over the largest possible result of the first roll to make the first roll the minimum result.
 	minDiceRoll = diceSize + 1;
 
-	if (diceArray[1] == 'a') {
+	if (diceArray[1].toLowerCase() === 'a') {
 		minMax = 1;
-	} else if (diceArray[1] == 'd') {
+	} else if (diceArray[1].toLowerCase() === 'd') {
 		minMax = -1;
 	}
 
@@ -396,14 +447,20 @@ var dndDice = function(user, diceArray) {
 
 	resultText += '\n\t**' + user.toUpperCase() + '** ROLLED ';
 
+	if (recordInitiative) {
+		resultText += 'INITIATIVE ';
+	}
+
 	if (intMod === 0) {
 		switch (minMax) {
 			case 1:
 				resultText += 'W/ ADV.  :  `' + diceMsg + '` = `[ ' + maxDiceRoll + ' ]`';
+				total = maxDiceRoll;
 				console.log('\t= ' + maxDiceRoll);
 				break;
 			case -1:
 				resultText += 'W/ DISADV.  :  `' + diceMsg + '` = `[ ' + minDiceRoll + ' ]`';
+				total = minDiceRoll;
 				console.log('\t= ' + minDiceRoll);
 				break;
 			default:
@@ -415,15 +472,15 @@ var dndDice = function(user, diceArray) {
 		switch (minMax) {
 			case 1:
 				resultText += ' W/ ADV.  :  `' + diceMsg + '` ─> `' + maxDiceRoll + intModText + '`';
-				maxDiceRoll += intMod;
-				resultText += ' = `[ ' + maxDiceRoll + ' ]`';
-				console.log('\t= ' + maxDiceRoll);
+				total = maxDiceRoll + intMod;
+				resultText += ' = `[ ' + total + ' ]`';
+				console.log('\t= ' + total);
 				break;
 			case -1:
 				resultText += ' W/ DISADV.  :  `' + diceMsg + '` ─> `' + minDiceRoll + intModText + '`';
-				minDiceRoll += intMod;
-				resultText += ' = `[ ' + minDiceRoll + ' ]`';
-				console.log('\t= ' + minDiceRoll);
+				total = minDiceRoll + intMod;
+				resultText += ' = `[ ' + total + ' ]`';
+				console.log('\t= ' + total);
 				break;
 			default:
 				resultText += '  :  `' + diceMsg + '` ─> `' + total + intModText + '`';
@@ -433,6 +490,11 @@ var dndDice = function(user, diceArray) {
 				break;
 		}
 	}
+
+	if (recordInitiative) {
+		initiatives.push([total, user]);
+	}
+
 	return resultText;
 };
 
@@ -440,7 +502,7 @@ var dndDice = function(user, diceArray) {
  * ===================== OLD UNSUPPORTED STUFF =====================
  */
 var shuffle = function(array) {
-	var currentIndex = array.length, temporaryValue, randomIndex;
+	var rentIndex = array.length, temporaryValue, randomIndex;
 
 	// While there remain elements to shuffle...
 	while (0 !== currentIndex) {
@@ -1332,7 +1394,7 @@ var initiativeHandler = function(message, user) {
 /*
  * =========== BOTTLE SPIN ===========
  */
-var bottleSpin = function(mode) {
+const bottleSpin = function(mode) {
 	console.log('Bottle Spin, mode: ' + mode);
 
 	var resultText = 'The bottle points ';
@@ -1353,7 +1415,7 @@ var bottleSpin = function(mode) {
 /*
  * ========= COIN FLIP =========
  */
-var coinFlip = function(count) {
+const coinFlip = function(count) {
 	console.log('Coin Flip: ' + count);
 
 	var resultText = 'Coin Flip: ';
@@ -1390,13 +1452,13 @@ var coinFlip = function(count) {
 /*
  * ========== PARSE ROLL ==========
  */
-var parseRoll = function(channelID, user, rollMessage) {
+const parseRoll = function(channelID, user, rollMessage) {
 	var resultText;
 	var rolls = rollMessage.split(',');
 
 	rolls = null === rolls ? [rollMessage] : rolls;
 
-	var length = rolls.length;
+	const length = rolls.length;
 
 	console.log('rolls: ' + rolls);
 
@@ -1422,7 +1484,7 @@ var parseRoll = function(channelID, user, rollMessage) {
 /*
  * ===================== PARSE UNIT CONVERSION =====================
  */
-var parseUnitConversion = function(inputString, toUnitSymbol) {
+const parseUnitConversion = function(inputString, toUnitSymbol) {
 	// Remove all whitespace.
 	// Convert to lower case.
 	// Replace commas with periods for floating point numbers.
@@ -1439,7 +1501,7 @@ var parseUnitConversion = function(inputString, toUnitSymbol) {
 /*
  * ==================== DISCORD DICE COMMAND ====================
  */
-var parseDiscordDiceCommand = function(user, channelID, message) {
+const parseDiscordDiceCommand = function(user, channelID, message) {
 	var args = message.substring(1).toLowerCase().split(' ');
 	var msg = '';
 
@@ -1480,7 +1542,7 @@ var parseDiscordDiceCommand = function(user, channelID, message) {
 						msg = 'Unknown game \'' + args[1] + '\'.';
 					}
 				} else {
-					msg = 'Please specify one of the supported games: ' + getSupportedGamesString();
+					msg = 'Please specify one of the supported games: ' + toGameList(null);
 				}
 			}
 			break;
@@ -1558,6 +1620,29 @@ var parseDiscordDiceCommand = function(user, channelID, message) {
 			}
 			break;
 
+		case 'i':
+		case 'in':
+		case 'it':
+		case 'ini':
+		case 'init':
+			if (activeChannels.indexOf(channelID) !== -1 && selectedGameIndex !== -1) {
+				if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
+					if (recordInitiative) {
+						msg = getInitiatives();
+						recordInitiative = false;
+					} else {
+						recordInitiative = true;
+						initiatives = [];
+						msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
+					}
+				} else {
+					msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
+				}
+			} else {
+				msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
+			}
+			break;
+
 		default:
 			msg = 'Unknown command \'' + args[0] + '\'.';
 	}
@@ -1568,7 +1653,7 @@ var parseDiscordDiceCommand = function(user, channelID, message) {
 /*
  * ============ MAIN PROCESS ============
  */
-var mainProcess = function() {
+const mainProcess = function() {
 	mybot = new Discord.Client({
 		token : config.token,
 		autorun : true
@@ -1594,8 +1679,7 @@ var mainProcess = function() {
 				chatMessage = parseUnitConversion(unitConversionMessage[1], unitConversionMessage[2]);
 			} else if (rollMessage) {
 				/*
-				 * Group 0 is the whole message, index 1 contains the actual roll message(s).
-				 * Doesn't return anything because there may be multiple rolls.
+				 * Group 0 is the whole message, index 1 contains the actual roll message(s). Doesn't return anything because there may be multiple rolls.
 				 */
 				parseRoll(channelID, user, rollMessage[1]);
 			}
