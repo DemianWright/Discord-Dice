@@ -1539,7 +1539,8 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 
 				fs.writeFileSync('./config.json', JSON.stringify({
 					discord : config,
-					activeChannels : activeChannels
+					activeChannels : activeChannels,
+					selectedGameIndex : selectedGameIndex
 				}).replace(/\r?\n|\r/g, ''));
 
 				console.log(user + ' enabled Discord Dice @ ' + channelID);
@@ -1552,6 +1553,13 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 				if (args.length > 1) {
 					if (supportedGames.indexOf(args[1]) > -1) {
 						selectedGameIndex = supportedGames.indexOf(args[1]);
+						
+						fs.writeFileSync('./config.json', JSON.stringify({
+							discord : config,
+							activeChannels : activeChannels,
+							selectedGameIndex : selectedGameIndex
+						}).replace(/\r?\n|\r/g, ''));
+						
 						msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
 
 						if (activeChannels.indexOf(channelID) === -1) {
@@ -1589,7 +1597,8 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 
 				fs.writeFileSync('./config.json', JSON.stringify({
 					discord : config,
-					activeChannels : activeChannels
+					activeChannels : activeChannels,
+					selectedGameIndex : selectedGameIndex
 				}).replace(/\r?\n|\r/g, ''));
 			}
 			break;
@@ -1680,6 +1689,10 @@ const mainProcess = function() {
 		token : config.token,
 		autorun : true
 	});
+	
+	if (selectedGameIndex !== -1) {
+		console.log('Using ' + supportedGamesNames[selectedGameIndex] + ' dice.');
+	}
 
 	mybot.on('message', function(user, userID, channelID, message) {
 		var chatMessage;
@@ -1723,6 +1736,8 @@ if (!fs.existsSync('./config.json')) {
 
 config = require('./config.json').discord;
 activeChannels = require('./config.json').activeChannels || '';
+selectedGameIndex = require('./config.json').selectedGameIndex;
+selectedGameIndex = isNaN(selectedGameIndex) ? -1 : selectedGameIndex;
 
 if (config.token === 'YOUR TOKEN') {
 	var pw = true;
