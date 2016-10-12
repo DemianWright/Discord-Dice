@@ -25,8 +25,9 @@ var fateDeck = [];
 
 // All regex matches are case insensitive.
 const regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
+const regexModifiers = /([+-]\s?\d*)/gi;
 
-const regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-]\d+)?$/i;
+const regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-].+)*$/i;
 const regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
 // TODO: Eldritch.
 
@@ -79,7 +80,7 @@ const sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-no
  * DnD
  */
 
-var recordInitiative = false;
+var recordInitiatives = false;
 var initiatives;
 
 /*
@@ -135,7 +136,7 @@ const arrayToString = function(array) {
  */
 const toGameList = function(arrayOfGameIndices) {
 	var string = '';
-	
+
 	if (arrayOfGameIndices === null) {
 		var length = supportedGames.length;
 
@@ -148,7 +149,7 @@ const toGameList = function(arrayOfGameIndices) {
 		});
 	} else{
 		var length = arrayOfGameIndices.length;
-		
+
 		arrayOfGameIndices.forEach(function(gidx, idx) {
 			string += supportedGamesNames[gidx] + ' (' + supportedGames[gidx] + ')';
 
@@ -160,6 +161,73 @@ const toGameList = function(arrayOfGameIndices) {
 
 	return string;
 }
+
+/**
+ * Returns the specified string without any whitespace characters and in all lower case letters.
+ */
+const stripWhitespaceToLowerCase = function(str) {
+	return str != null && str.replace(/\s+/g, '').toLowerCase();
+}
+
+/**
+ * Returns the specified number of random integers generated in the inclusive range [minValue, maxValue].
+ */
+const getRandomInts = function(count, minValue, maxValue) {
+	var values = [];
+
+	for(var i = 0; i < count; i++) {
+		values.push(getRandomInt(minValue, maxValue));
+	}
+
+	return values;
+}
+
+/**
+ * Returns a string containing the specified roll values in a comma separated list with the minimum and maximum values bolded.
+ */
+const toRollList = function(rollValues, minValue, maxValue) {
+	var string = '';
+	const lastIndex = rollValues.length - 1;
+
+	rollValues.forEach(function(val, idx) {
+		if (val === minValue || val === maxValue) {
+			string += minMaxBold + val + minMaxBold;
+		} else {
+			string += val;
+		}
+
+		if (idx < lastIndex) {
+			string += ', ';
+		}		
+	});
+
+	return string;
+}
+
+/**
+ * Returns the sum of all values in a numeric array.
+ */
+const arraySum = function(arr){
+	// How is it that Javascript doesn't have something like this by default?
+	var sum = 0;
+
+	for(var idx = arr.length; idx; sum += arr[--idx]);
+
+	return sum;
+};
+
+/**
+ * Returns the sum of all values in an array of strings representing integers.
+ */
+const intStringArraySum = function(strArr) {
+	var sum = 0;
+
+	strArr.forEach(function(str){
+		sum += parseInt(str);
+	});
+
+	return sum;
+};
 
 /*
  * ================ UNIT CONVERSIONS ================
@@ -374,126 +442,80 @@ const getInitiatives = function() {
 }
 
 const dndDice = function(user, diceArray) {
-	console.log('DnD Dice: ' + diceArray);
-
 	if (!diceArray) {
 		return null;
 	}
 
 	// Index 0 is the whole message.
-	var diceCount = parseInt(diceArray[2], 10);
-	var diceSize = parseInt(diceArray[3], 10);
-	var intMod = parseInt(diceArray[4], 10);
-
-	var resultText = '';
-	var total = 0;
-	var minMax = 0;
-	var minDiceRoll;
-	var maxDiceRoll = 0;
-	var diceRoll;
+	const highLow = diceArray[1].toLowerCase();
+	var count = parseInt(diceArray[2], 10);
+	var size = parseInt(diceArray[3], 10);
+	var modStr = undefined === diceArray[4] ? null : diceArray[4];
 
 	// Minimum 1 die.
-	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
+	count = isNaN(count) ? 1 : (count < 1 ? 1 : count);
 
-	// Maximum 600 dice. Did some manual testing and it seems to be the limit on my machine.
-	diceCount = diceCount > 600 ? 600 : diceCount;
+	// Maximum 1000 dice. The message may fail to post if rolling too many dice.
+	count = count > 1000 ? 1000 : count;
 
 	// Minimum size 2 die.
-	diceSize = diceSize < 2 ? 2 : diceSize;
+	size = size < 2 ? 2 : size;
 
-	// Default to +0.
-	intMod = isNaN(intMod) ? 0 : intMod;
+	var minMax;
 
-	var intModText = intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod);
-
-	// Push the minimum result to over the largest possible result of the first roll to make the first roll the minimum result.
-	minDiceRoll = diceSize + 1;
-
-	if (diceArray[1].toLowerCase() === 'a') {
+	if (highLow === 'a') {
 		minMax = 1;
-	} else if (diceArray[1].toLowerCase() === 'd') {
+	} else if (highLow === 'd') {
 		minMax = -1;
+	} else {
+		minMax = 0;
 	}
 
 	// Minimum 2 dice with advantage/disadvantage.
-	diceCount = minMax === 0 ? diceCount : (diceCount === 1 ? 2 : diceCount);
+	count = minMax === 0 ? count : (count === 1 ? 2 : count);
 
-	var diceMsg = (undefined === diceArray[1] ? '' : diceArray[1]) + diceCount + 'd' + diceSize + '' + intModText;
-	console.log(user + ' rolls: ' + diceMsg);
+	console.log(user + " rolls DnD Dice\n\tHigh/Low: " + highLow + "\n\tCount: " + count + "\n\tSize: " + size + "\n\tMod: " + modStr);
 
-	while (diceCount > 0) {
-		diceRoll = getRandomInt(1, diceSize);
+	// Resolve initial roll.
 
-		if (diceRoll === 1 || diceRoll === diceSize) {
-			resultText += minMaxBold + diceRoll + minMaxBold;
-		} else {
-			resultText += diceRoll;
-		}
+	var rollResults = getRandomInts(count, 1, size);
+	var resultText = toRollList(rollResults, 1, size) + "\n\t**" + user.toUpperCase() + '** ROLLED ';
+	var total = 0;
 
-		if (minMax === 0) {
-			total += diceRoll;
-		} else if (minMax > 0) {
-			maxDiceRoll = Math.max(diceRoll, maxDiceRoll);
-		} else {
-			minDiceRoll = Math.min(diceRoll, minDiceRoll);
-		}
-
-		diceCount -= 1;
-
-		if (diceCount > 0) {
-			resultText += ', ';
-		}
-	}
-
-	resultText += '\n\t**' + user.toUpperCase() + '** ROLLED ';
-
-	if (recordInitiative) {
+	if (recordInitiatives) {
 		resultText += 'INITIATIVE ';
 	}
 
-	if (intMod === 0) {
-		switch (minMax) {
-			case 1:
-				resultText += 'W/ ADV.  :  `' + diceMsg + '` = `[ ' + maxDiceRoll + ' ]`';
-				total = maxDiceRoll;
-				console.log('\t= ' + maxDiceRoll);
-				break;
-			case -1:
-				resultText += 'W/ DISADV.  :  `' + diceMsg + '` = `[ ' + minDiceRoll + ' ]`';
-				total = minDiceRoll;
-				console.log('\t= ' + minDiceRoll);
-				break;
-			default:
-				resultText += ' :  `' + diceMsg + '` = `[ ' + total + ' ]`';
-				console.log('\t= ' + total);
-				break;
-		}
+	if (minMax === 0) {
+		total = arraySum(rollResults);
+	} else if (minMax > 0) {
+		total = Math.max.apply(null, rollResults);
+		resultText += 'W/ ADV. ';
 	} else {
-		switch (minMax) {
-			case 1:
-				resultText += ' W/ ADV.  :  `' + diceMsg + '` ─> `' + maxDiceRoll + intModText + '`';
-				total = maxDiceRoll + intMod;
-				resultText += ' = `[ ' + total + ' ]`';
-				console.log('\t= ' + total);
-				break;
-			case -1:
-				resultText += ' W/ DISADV.  :  `' + diceMsg + '` ─> `' + minDiceRoll + intModText + '`';
-				total = minDiceRoll + intMod;
-				resultText += ' = `[ ' + total + ' ]`';
-				console.log('\t= ' + total);
-				break;
-			default:
-				resultText += '  :  `' + diceMsg + '` ─> `' + total + intModText + '`';
-				total += intMod;
-				resultText += ' = `[ ' + total + ' ]`';
-				console.log('\t= ' + total);
-				break;
-		}
+		total = Math.min.apply(null, rollResults);
+		resultText += 'W/ DISADV. ';
 	}
 
-	if (recordInitiative) {
+	resultText += ': `' + highLow + count + 'd' + size;
+
+	// Resolve modifiers.
+
+	if (modStr !== null) {
+		var valString = stripWhitespaceToLowerCase(modStr);
+		var value = intStringArraySum(valString.match(regexModifiers));
+		var sign = value < 0 ? '' : '+'; 
+
+		resultText += valString + '` ─> `' + total + sign + value;
+		total += value
+	}
+
+	resultText += '` = `[ ' + total + ' ]`';
+
+	if (recordInitiatives) {
 		initiatives.push([total, user]);
 	}
+
+	console.log('\n\t= ' + total);
 
 	return resultText;
 };
@@ -786,15 +808,15 @@ var fateCards = function(message) {
 
 var fateCount = function() {
 	var counts = {
-		'-4' : 0,
-		'-3' : 0,
-		'-2' : 0,
-		'-1' : 0,
-		'0' : 0,
-		'1' : 0,
-		'2' : 0,
-		'3' : 0,
-		'4' : 0
+			'-4' : 0,
+			'-3' : 0,
+			'-2' : 0,
+			'-1' : 0,
+			'0' : 0,
+			'1' : 0,
+			'2' : 0,
+			'3' : 0,
+			'4' : 0
 	}, avg = 0, count = 0;
 	fateDeck.forEach(function(result) {
 		counts[result] += 1;
@@ -915,13 +937,13 @@ var starWarsDice = function(message) {
 	var results = {};
 	var builder = '';
 	var dieTypes = {
-		b : ['', '', 's', 'sa', 'aa', 'a'],
-		s : ['', '', 'f', 'f', 't', 't'],
-		a : ['', 's', 's', 'ss', 'a', 'a', 'as', 'aa'],
-		d : ['', 'f', 'ff', 't', 't', 't', 'tt', 'ft'],
-		p : ['', 's', 's', 'ss', 'ss', 'a', 'as', 'as', 'as', 'aa', 'aa', 'r'],
-		c : ['', 'f', 'f', 'ff', 'ff', 't', 't', 'ft', 'ft', 'tt', 'tt', 'e'],
-		f : ['d', 'd', 'd', 'd', 'd', 'd', 'dd', 'l', 'l', 'll', 'll', 'll']
+			b : ['', '', 's', 'sa', 'aa', 'a'],
+			s : ['', '', 'f', 'f', 't', 't'],
+			a : ['', 's', 's', 'ss', 'a', 'a', 'as', 'aa'],
+			d : ['', 'f', 'ff', 't', 't', 't', 'tt', 'ft'],
+			p : ['', 's', 's', 'ss', 'ss', 'a', 'as', 'as', 'as', 'aa', 'aa', 'r'],
+			c : ['', 'f', 'f', 'ff', 'ff', 't', 't', 'ft', 'ft', 'tt', 'tt', 'e'],
+			f : ['d', 'd', 'd', 'd', 'd', 'd', 'dd', 'l', 'l', 'll', 'll', 'll']
 	}
 	if (dice) {
 		dice = dice[1].split('');
@@ -1187,11 +1209,11 @@ var initiativeHandler = function(message, user) {
 	var add = function() {
 		var name = parts[1];
 		var actor = {
-			name : name,
-			initiative : parseInt(parts[2], 10) || 0,
-			motes : parseInt(parts[3], 10) || 0,
-			maxmotes : parseInt(parts[3], 10) || 0,
-			acted : false
+				name : name,
+				initiative : parseInt(parts[2], 10) || 0,
+				motes : parseInt(parts[3], 10) || 0,
+				maxmotes : parseInt(parts[3], 10) || 0,
+				acted : false
 		};
 		tracker[name] = actor;
 		back.push(function(un) {
@@ -1627,11 +1649,11 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 		case 'init':
 			if (activeChannels.indexOf(channelID) !== -1 && selectedGameIndex !== -1) {
 				if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
-					if (recordInitiative) {
+					if (recordInitiatives) {
 						msg = getInitiatives();
-						recordInitiative = false;
+						recordInitiatives = false;
 					} else {
-						recordInitiative = true;
+						recordInitiatives = true;
 						initiatives = [];
 						msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
 					}
