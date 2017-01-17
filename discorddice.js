@@ -92,6 +92,61 @@ const gamesSupportingInitiatives = [gidxDnd];
 /*
  * Helper functions.
  */
+/**
+ * Returns true if the bot is enabled on the specified channel.
+ */
+const botIsEnabled = function(channelID) {
+	return activeChannels.indexOf(channelID) !== -1;
+}
+
+/**
+ * Returns true if a game has been selected.
+ */
+const hasGameSelected = function() {
+	return selectedGameIndex !== -1;
+}
+
+/**
+ * Enables the bot on the specified channel and returns a chat message.
+ */
+const enableBot = function(channelID, user) {
+	activeChannels += channelID;
+
+	fs.writeFileSync('./config.json', JSON.stringify({
+		discord : config,
+		activeChannels : activeChannels,
+		selectedGameIndex : selectedGameIndex
+	}).replace(/\r?\n|\r/g, ''));
+
+	console.log(user + ' enabled Discord Dice @ ' + channelID);
+	
+	return 'Discord Dice enabled.';
+}
+
+/**
+ * Disables the bot on the specified channel and returns a chat message.
+ */
+const disableBot = function(channelID, user) {
+	var msg = null;
+	
+	if (selectedGameIndex !== -1) {
+		msg = 'Stopped playing ' + supportedGamesNames[selectedGameIndex] + " dice.\n";
+	}
+
+	msg += 'Discord Dice disabled.';
+	
+	activeChannels = activeChannels.replace(channelID, '');
+
+	fs.writeFileSync('./config.json', JSON.stringify({
+		discord : config,
+		activeChannels : activeChannels,
+		selectedGameIndex : selectedGameIndex
+	}).replace(/\r?\n|\r/g, ''));
+	
+	console.log(user + ' disabled Discord Dice @ ' + channelID);
+	
+	return msg;
+}
 
 /**
  * Uses the bot the send a message to chat.
@@ -1527,33 +1582,60 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 	var args = message.substring(1).toLowerCase().split(' ');
 	var msg = '';
 
+	// Bot on/off messages.
 	switch (args[0]) {
 		case 'dd':
+		case 'ddice':
+		case 'discorddice':
+			if (botIsEnabled(channelID)) {
+				msg = disableBot(channelID, user);
+			} else {
+				msg = enableBot(channelID, user);
+			}
+			break;
+
 		case 'don':
 		case 'dice':
-		case 'ddice':
 		case 'diceon':
 		case 'startdice':
-			if (activeChannels.indexOf(channelID) === -1) {
-				activeChannels += channelID;
+			if (botIsEnabled(channelID)) {
+				msg = 'Discord Dice is already enabled.';
+			} else {
+				msg = enableBot(channelID, user);
+			}
+			break;
 
-				fs.writeFileSync('./config.json', JSON.stringify({
-					discord : config,
-					activeChannels : activeChannels,
-					selectedGameIndex : selectedGameIndex
-				}).replace(/\r?\n|\r/g, ''));
+		case 'doff':
+		case 'nodice':
+		case 'diceoff':
+		case 'stopdice':
+			if (botIsEnabled(channelID)) {
+				msg = disableBot(channelID, user);
+			} else {
+				msg = 'Discord Dice is already disabled.';
+			}
+			break;
 
-				console.log(user + ' enabled Discord Dice @ ' + channelID);
-				msg = 'Discord Dice enabled.';
+		case 'bold':
+		case 'bolds':
+		case 'bolding':
+			msg = 'Disabled bolding ones and maximum dice results.';
+	
+			if ('**' === minMaxBold) {
+				minMaxBold = '';
+			} else {
+				msg = 'Enabled bolding ones and maximum dice results.';
+				minMaxBold = '**';
 			}
 			break;
 
 		case 'g':
-			if (activeChannels.indexOf(channelID) !== -1) {
+		case 'game':
+			if (botIsEnabled(channelID)) {
 				if (args.length > 1) {
 					if (supportedGames.indexOf(args[1]) > -1) {
 						selectedGameIndex = supportedGames.indexOf(args[1]);
-						
+							
 						fs.writeFileSync('./config.json', JSON.stringify({
 							discord : config,
 							activeChannels : activeChannels,
@@ -1561,7 +1643,7 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 						}).replace(/\r?\n|\r/g, ''));
 						
 						msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
-
+							
 						if (activeChannels.indexOf(channelID) === -1) {
 							activeChannels += channelID;
 							console.log(user + ' enabled Discord Dice @ ' + channelID);
@@ -1576,62 +1658,22 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 				}
 			}
 			break;
-
-		case 'doff':
-		case 'nodice':
-		case 'diceoff':
-		case 'stopdice':
-			var index = activeChannels.indexOf(channelID);
-
-			if (index !== -1) {
-				console.log('Channel ID: ' + channelID);
-
-				if (selectedGameIndex !== -1) {
-					msg = 'Stopped playing ' + supportedGamesNames[selectedGameIndex] + " dice.\n";
-				}
-
-				activeChannels = activeChannels.replace(channelID, '');
-				msg += 'Discord Dice disabled.';
-
-				console.log(msg);
-
-				fs.writeFileSync('./config.json', JSON.stringify({
-					discord : config,
-					activeChannels : activeChannels,
-					selectedGameIndex : selectedGameIndex
-				}).replace(/\r?\n|\r/g, ''));
-			}
-			break;
-
-		case 'bold':
-		case 'bolds':
-			if (activeChannels.indexOf(channelID) === -1) {
-				msg = 'Disabled bolding ones and maximum dice results.';
-
-				if ('**' === minMaxBold) {
-					minMaxBold = '';
-				} else {
-					msg = 'Enabled bolding ones and maximum dice results.';
-					minMaxBold = '**';
-				}
-			}
-			break;
-
+	
 		case 'cf':
 		case 'fc':
 		case 'coin':
 		case 'flip':
 		case 'coinflip':
 		case 'flipcoin':
-			if (activeChannels.indexOf(channelID) !== -1) {
+			if (botIsEnabled(channelID)) {
 				var count = 1;
-
+	
 				if (args.length > 1) {
 					count = parseInt(args[1]);
-
+	
 					// Limit to 1.
 					count = count < 1 ? 1 : count;
-
+	
 					// Limit to 100.
 					count = count > 100 ? 100 : count;
 				}
@@ -1639,41 +1681,44 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 				msg = coinFlip(count);
 			}
 			break;
-
+	
 		case 'bs':
 		case 'sb':
 		case 'bottle':
 		case 'spin':
 		case 'bottlespin':
 		case 'spinbottle':
-			if (activeChannels.indexOf(channelID) !== -1) {
+			if (botIsEnabled(channelID)) {
 				msg = bottleSpin(args[1]);
 			}
 			break;
-
+	
 		case 'i':
 		case 'in':
 		case 'it':
 		case 'ini':
 		case 'init':
-			if (activeChannels.indexOf(channelID) !== -1 && selectedGameIndex !== -1) {
-				if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
-					if (recordInitiatives) {
-						msg = getInitiatives();
-						recordInitiatives = false;
+		case 'initiative':
+			if (botIsEnabled(channelID)) {
+				if (hasGameSelected()) {
+					if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
+						if (recordInitiatives) {
+							msg = getInitiatives();
+							recordInitiatives = false;
+						} else {
+							recordInitiatives = true;
+							initiatives = [];
+							msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
+						}
 					} else {
-						recordInitiatives = true;
-						initiatives = [];
-						msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
+						msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
 					}
 				} else {
-					msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
+					msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
 				}
-			} else {
-				msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
 			}
 			break;
-
+	
 		default:
 			msg = 'Unknown command \'' + args[0] + '\'.';
 	}
