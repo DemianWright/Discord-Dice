@@ -1619,13 +1619,15 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 		case 'bold':
 		case 'bolds':
 		case 'bolding':
-			msg = 'Disabled bolding ones and maximum dice results.';
-	
-			if ('**' === minMaxBold) {
-				minMaxBold = '';
-			} else {
-				msg = 'Enabled bolding ones and maximum dice results.';
-				minMaxBold = '**';
+			if (botIsEnabled(channelID)) {
+				msg = 'Disabled bolding ones and maximum dice results.';
+		
+				if ('**' === minMaxBold) {
+					minMaxBold = '';
+				} else {
+					msg = 'Enabled bolding ones and maximum dice results.';
+					minMaxBold = '**';
+				}
 			}
 			break;
 
