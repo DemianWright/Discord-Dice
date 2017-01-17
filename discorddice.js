@@ -97,7 +97,7 @@ const gamesSupportingInitiatives = [gidxDnd];
  * Uses the bot the send a message to chat.
  */
 const botMessage = function(channelID, messageText) {
-	// Message is not undefined, null, or contains only whitespace.
+	// Message is not undefined, null, and does not contain only whitespace.
 	if (typeof messageText !== 'undefined' && messageText != null) {
 		mybot.sendMessage({
 			to : channelID,
@@ -1686,15 +1686,11 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
  */
 const mainProcess = function() {
 	mybot = new Discord.Client({
-		token : config.token,
-		autorun : true
+		token: config.token,
+		autorun: true
 	});
-	
-	if (selectedGameIndex !== -1) {
-		console.log('Using ' + supportedGamesNames[selectedGameIndex] + ' dice.');
-	}
 
-	mybot.on('message', function(user, userID, channelID, message) {
+	mybot.on('message', function(user, userID, channelID, message, event) {
 		var chatMessage;
 
 		// Is the message a Discord Dice command?
@@ -1724,12 +1720,29 @@ const mainProcess = function() {
 		// Will not send anything if the message is undefined or empty.
 		botMessage(channelID, chatMessage);
 	});
+
+	mybot.on('ready', function() {
+	    console.log("Ready | " + mybot.username + " (" + mybot.id + ")");
+	    
+		if (selectedGameIndex !== -1) {
+			console.log('Using ' + supportedGamesNames[selectedGameIndex] + ' dice.');
+		}
+	});
+	
+	mybot.on('disconnect', function(msg, code) {
+	    if (code === 0){
+	    	return console.error(msg);
+	    }
+	    
+	    console.log("Discord Dice tried to disconnect.");
+	    mybot.connect();
+	});
 };
 
 if (!fs.existsSync('./config.json')) {
 	fs.writeFileSync('./config.json', JSON.stringify({
-		discord : {
-			token : 'YOUR TOKEN'
+		discord: {
+			token: 'YOUR TOKEN'
 		}
 	}).replace(/\r?\n|\r/g, ''));
 }
