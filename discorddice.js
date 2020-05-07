@@ -29,21 +29,12 @@ const regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-].+)*$/i;
 const regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
 // TODO: Eldritch.
 
-// var supportedGames = ['stdd','ex','or','sr','dnd','l5r','wod']
-// var supportedGamesNames = ['Standard', 'Exalted', 'The One Ring', 'Shadowrun', 'Dungeons & Dragons', 'Legend of the Five Rings', 'World of Darkness'];
 const gidxStdd = 0;
 const gidxDnd = 1;
 const supportedGames = ['stdd', 'dnd']
 const supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
 
 var selectedGameIndex = -1;
-
-// Unsupported for now.
-const regexExalted = /^\d+?e/i;
-const regexWOD = /^\d+?w/i;
-const regexShadowrun = /^\d+?s/i;
-const regexL5R = /^\d+?k/i;
-const regexOneRing = /^\d+?r/i;
 
 /*
  * Unit conversions.
@@ -168,7 +159,8 @@ const getRandomInt = function(min, max) {
 }
 
 /**
- * Returns a string containing the elements of the array in a comma separated list.
+ * Returns a string containing the elements of the array in a comma separated
+ * list.
  */
 const arrayToString = function(array) {
 	var string = '';
@@ -186,7 +178,8 @@ const arrayToString = function(array) {
 }
 
 /**
- * Returns a string containing the names and codes of the specified games in a comma separated list.
+ * Returns a string containing the names and codes of the specified games in a
+ * comma separated list.
  */
 const toGameList = function(arrayOfGameIndices) {
 	var string = '';
@@ -217,14 +210,16 @@ const toGameList = function(arrayOfGameIndices) {
 }
 
 /**
- * Returns the specified string without any whitespace characters and in all lower case letters.
+ * Returns the specified string without any whitespace characters and in all
+ * lower case letters.
  */
 const stripWhitespaceToLowerCase = function(str) {
 	return str != null && str.replace(/\s+/g, '').toLowerCase();
 }
 
 /**
- * Returns the specified number of random integers generated in the inclusive range [minValue, maxValue].
+ * Returns the specified number of random integers generated in the inclusive
+ * range [minValue, maxValue].
  */
 const getRandomInts = function(count, minValue, maxValue) {
 	var values = [];
@@ -237,7 +232,8 @@ const getRandomInts = function(count, minValue, maxValue) {
 }
 
 /**
- * Returns a string containing the specified roll values in a comma separated list with the minimum and maximum values bolded.
+ * Returns a string containing the specified roll values in a comma separated
+ * list with the minimum and maximum values bolded.
  */
 const toRollList = function(rollValues, minValue, maxValue) {
 	var string = '';
@@ -434,7 +430,8 @@ const standardDice = function(user, diceArray) {
 	// Minimum 1 die.
 	diceCount = isNaN(diceCount) ? 1 : (diceCount < 1 ? 1 : diceCount);
 
-	// Maximum 600 dice. Did some manual testing and it seems to be the limit on my machine.
+	// Maximum 600 dice. Did some manual testing and it seems to be the limit on
+	// my machine.
 	diceCount = diceCount > 600 ? 600 : diceCount;
 
 	// Minimum size 2 die.
@@ -687,152 +684,179 @@ const parseUnitConversion = function(inputString, toUnitSymbol) {
 /*
  * ==================== DISCORD DICE COMMAND ====================
  */
+
 const parseDiscordDiceCommand = function(user, channelID, message) {
 	var args = message.substring(1).toLowerCase().split(' ');
 	var msg = '';
+	
+	const cmdBolding = function() {
+		msg = 'Disabled bolding ones and maximum dice results.';
 
-	// Bot on/off messages.
-	switch (args[0]) {
-		case 'dd':
-		case 'ddice':
-		case 'discorddice':
-			if (botIsEnabled(channelID)) {
-				msg = disableBot(channelID, user);
-			} else {
-				msg = enableBot(channelID, user);
-			}
-			break;
-
-		case 'don':
-		case 'dice':
-		case 'diceon':
-		case 'startdice':
-			if (botIsEnabled(channelID)) {
-				msg = 'Discord Dice is already enabled.';
-			} else {
-				msg = enableBot(channelID, user);
-			}
-			break;
-
-		case 'doff':
-		case 'nodice':
-		case 'diceoff':
-		case 'stopdice':
-			if (botIsEnabled(channelID)) {
-				msg = disableBot(channelID, user);
-			} else {
-				msg = 'Discord Dice is already disabled.';
-			}
-			break;
-
-		case 'bold':
-		case 'bolds':
-		case 'bolding':
-			if (botIsEnabled(channelID)) {
-				msg = 'Disabled bolding ones and maximum dice results.';
+		if ('**' === minMaxBold) {
+			minMaxBold = '';
+		} else {
+			msg = 'Enabled bolding ones and maximum dice results.';
+			minMaxBold = '**';
+		}
 		
-				if ('**' === minMaxBold) {
-					minMaxBold = '';
-				} else {
-					msg = 'Enabled bolding ones and maximum dice results.';
-					minMaxBold = '**';
-				}
-			}
-			break;
-
-		case 'g':
-		case 'game':
-			if (botIsEnabled(channelID)) {
-				if (args.length > 1) {
-					if (supportedGames.indexOf(args[1]) > -1) {
-						selectedGameIndex = supportedGames.indexOf(args[1]);
-							
-						fs.writeFileSync('./config.json', JSON.stringify({
-							discord : config,
-							activeChannels : activeChannels,
-							selectedGameIndex : selectedGameIndex
-						}).replace(/\r?\n|\r/g, ''));
-						
-						msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
-							
-						if (activeChannels.indexOf(channelID) === -1) {
-							activeChannels += channelID;
-							console.log(user + ' enabled Discord Dice @ ' + channelID);
-						}
-
-						console.log(msg);
-					} else {
-						msg = 'Unknown game \'' + args[1] + '\'.';
-					}
-				} else {
-					msg = 'Please specify one of the supported games: ' + toGameList(null);
-				}
-			}
-			break;
-	
-		case 'cf':
-		case 'fc':
-		case 'coin':
-		case 'flip':
-		case 'coinflip':
-		case 'flipcoin':
-			if (botIsEnabled(channelID)) {
-				var count = 1;
-	
-				if (args.length > 1) {
-					count = parseInt(args[1]);
-	
-					// Limit to 1.
-					count = count < 1 ? 1 : count;
-	
-					// Limit to 100.
-					count = count > 100 ? 100 : count;
-				}
-
-				msg = coinFlip(count);
-			}
-			break;
-	
-		case 'bs':
-		case 'sb':
-		case 'bottle':
-		case 'spin':
-		case 'bottlespin':
-		case 'spinbottle':
-			if (botIsEnabled(channelID)) {
-				msg = bottleSpin(args[1]);
-			}
-			break;
-	
-		case 'i':
-		case 'in':
-		case 'it':
-		case 'ini':
-		case 'init':
-		case 'initiative':
-			if (botIsEnabled(channelID)) {
-				if (hasGameSelected()) {
-					if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
-						if (recordInitiatives) {
-							msg = getInitiatives();
-							recordInitiatives = false;
-						} else {
-							recordInitiatives = true;
-							initiatives = [];
-							msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
-						}
-					} else {
-						msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
-					}
-				} else {
-					msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
-				}
-			}
-			break;
-	
-		default:
-			msg = 'Unknown command \'' + args[0] + '\'.';
+		return msg
 	}
+
+	const cmdChangeGame = function(args) {
+		if (args.length > 1) {
+			if (supportedGames.indexOf(args[1]) > -1) {
+				selectedGameIndex = supportedGames.indexOf(args[1]);
+					
+				fs.writeFileSync('./config.json', JSON.stringify({
+					discord : config,
+					activeChannels : activeChannels,
+					selectedGameIndex : selectedGameIndex
+				}).replace(/\r?\n|\r/g, ''));
+				
+				msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
+					
+				if (activeChannels.indexOf(channelID) === -1) {
+					activeChannels += channelID;
+					console.log(user + ' enabled Discord Dice @ ' + channelID);
+				}
+	
+				console.log(msg);
+			} else {
+				msg = 'Unknown game \'' + args[1] + '\'.';
+			}
+		} else {
+			msg = 'Please specify one of the supported games: ' + toGameList(null);
+		}
+		
+		return msg;
+	}
+
+	const cmdCoinFlip = function(args) {
+		var count = 1;
+		
+		if (args.length > 1) {
+			count = parseInt(args[1]);
+	
+			// Limit to 1.
+			count = count < 1 ? 1 : count;
+	
+			// Limit to 100.
+			count = count > 100 ? 100 : count;
+		}
+	
+		return coinFlip(count);
+	}
+
+	const cmdInitiativeToggle = function() {
+		if (hasGameSelected()) {
+			if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
+				if (recordInitiatives) {
+					msg = getInitiatives();
+					recordInitiatives = false;
+				} else {
+					recordInitiatives = true;
+					initiatives = [];
+					msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
+				}
+			} else {
+				msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
+			}
+		} else {
+			msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
+		}
+		
+		return msg;
+	}
+
+	if (botIsEnabled(channelID)) {
+		switch (args[0]) {
+			case 'dd':
+			case 'ddice':
+			case 'discorddice':
+				msg = disableBot(channelID, user);
+				break;
+	
+			case 'don':
+			case 'dice':
+			case 'diceon':
+			case 'startdice':
+				msg = 'Discord Dice is already enabled.';
+				break;
+	
+			case 'doff':
+			case 'nodice':
+			case 'diceoff':
+			case 'stopdice':
+				msg = disableBot(channelID, user);
+				break;
+	
+			case 'bold':
+			case 'bolds':
+			case 'bolding':
+				msg = cmdBolding()
+				break;
+	
+			case 'g':
+			case 'game':
+				msg = cmdChangeGame(args);
+				break;
+		
+			case 'cf':
+			case 'fc':
+			case 'coin':
+			case 'flip':
+			case 'coinflip':
+			case 'flipcoin':
+				msg = cmdCoinFlip(args);
+				break;
+		
+			case 'bs':
+			case 'sb':
+			case 'bottle':
+			case 'spin':
+			case 'bottlespin':
+			case 'spinbottle':
+				msg = bottleSpin(args[1]);
+				break;
+		
+			case 'i':
+			case 'in':
+			case 'it':
+			case 'ini':
+			case 'init':
+			case 'initiative':
+				msg = cmdInitiativeToggle(args);
+				break;
+		
+			default:
+				msg = 'Unknown command \'' + args[0] + '\'.';
+			}
+		} else {
+			switch (args[0]) {
+				case 'dd':
+				case 'ddice':
+				case 'discorddice':
+					msg = enableBot(channelID, user);
+					break;
+		
+				case 'don':
+				case 'dice':
+				case 'diceon':
+				case 'startdice':
+					msg = enableBot(channelID, user);
+					break;
+		
+				case 'doff':
+				case 'nodice':
+				case 'diceoff':
+				case 'stopdice':
+					msg = 'Discord Dice is already disabled.';
+					break;
+
+				default:
+					msg = 'Unknown command \'' + args[0] + '\'.';
+			}
+		}
 
 	return msg;
 }
@@ -863,7 +887,9 @@ const mainProcess = function() {
 				chatMessage = parseUnitConversion(unitConversionMessage[1], unitConversionMessage[2]);
 			} else if (rollMessage) {
 				/*
-				 * Group 0 is the whole message, index 1 contains the actual roll message(s). Doesn't return anything because there may be multiple rolls.
+				 * Group 0 is the whole message, index 1 contains the actual
+				 * roll message(s). Doesn't return anything because there may be
+				 * multiple rolls.
 				 */
 				parseRoll(message, rollMessage[1]);
 			}
