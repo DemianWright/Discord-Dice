@@ -14,7 +14,7 @@ Commands | Description
 `bold`<br/>`bolds`<br/>`bolding` | Toggles bolding 1 and maximum dice values in dice results.
 `bs` *mode*<br />`sb` *mode*<br />`bottle` *mode*<br />`spin` *mode*<br />`bottlespin` *mode*<br />`spinbottle` *mode* | Spin a bottle once to randomly generate a compass direction. An optional mode argument may be provided.
 Bottle spin mode: *none* | Generates a cardinal or ordinal / intercardinal direction. (E.g. north or northeast)
-Bottle spin mode: `c` or `cardinal | Generates a cardinal direction. (E.g. north)
+Bottle spin mode: `c` or `cardinal` | Generates a cardinal direction. (E.g. north or east)
 Bottle spin mode: `h`, `16`, or `half` | Generates a cardinal or ordinal direction or one of the eight half winds. (E.g. north, northeast, or north-northeast)
 `cf`<br />`fc`<br />`coin`<br />`flip`<br />`coinflip`<br />`flipcoin` | Flips a minimum of 1 or a maximum of 100 coins at once. (Value clamped to bounds.)
 `g`<br />`game` | Lists supported games.
