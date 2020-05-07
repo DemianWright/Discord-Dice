@@ -1,11 +1,9 @@
-/*
- * Miscellaneous.
- */
-const Discord = require('discord.io');
+// Libraries.
+const Discord = require('discord.js');
 const fs = require('fs');
 
-var mybot;
-
+// Globals.
+var bot;
 var config;
 var activeChannels = [];
 var minMaxBold = '**';
@@ -151,13 +149,14 @@ const disableBot = function(channelID, user) {
 /**
  * Uses the bot the send a message to chat.
  */
-const botMessage = function(channelID, messageText) {
+const botMessage = function(message, messageText) {
 	// Message is not undefined, null, and does not contain only whitespace.
 	if (typeof messageText !== 'undefined' && messageText != null) {
-		mybot.sendMessage({
-			to : channelID,
-			message : messageText
-		});
+		if (messageText.length > 2000) {
+			message.reply("Result message too long. Try rolling less or smaller dice.");
+		} else {
+			message.reply(messageText);
+		}
 	}
 }
 
@@ -474,6 +473,9 @@ const standardDice = function(user, diceArray) {
 /*
  * ======== DND DICE ========
  */
+
+// TODO: Name after initiative roll.
+// TODO: Nx rolls to repeat same roll.
 const initiativesSorter = function(a, b) {
 	// Largest first.
 	return b[0] - a[0]
@@ -534,7 +536,7 @@ const dndDice = function(user, diceArray) {
 	// Resolve initial roll.
 
 	var rollResults = getRandomInts(count, 1, size);
-	var resultText = toRollList(rollResults, 1, size) + "\n\t**" + user.toUpperCase() + '** ROLLED ';
+	var resultText = "Results: " + (count > 100 ? toRollList(rollResults.slice(0, 100), 1, size) + "... (only showing first 100 results)" : toRollList(rollResults, 1, size)) + "\n\t**" + user.toUpperCase() + '** ROLLED ';
 	var total = 0;
 
 	if (recordInitiatives) {
@@ -856,7 +858,7 @@ var fateCards = function(message) {
 	if (fateDeck.length === 0) {
 		fateDeck = fateMasterDeck.slice(0);
 		shuffle(fateDeck);
-		mybot.reply(message, 'Fate Deck Shuffled');
+		bot.reply(message, 'Fate Deck Shuffled');
 	}
 	return fateDeck.pop() + ', ' + fateDeck.length + ' cards remaining';
 };
@@ -1166,7 +1168,7 @@ var initiativeHandler = function(message, user) {
 		}
 	}
 	var sendMessage = function(msg) {
-		mybot.reply(message, msg);
+		bot.reply(message, msg);
 	};
 	var decodeInitiative = function(str) {
 		if (parseInt(str, 10).toString() !== 'NaN') {
@@ -1529,7 +1531,7 @@ const coinFlip = function(count) {
 /*
  * ========== PARSE ROLL ==========
  */
-const parseRoll = function(channelID, user, rollMessage) {
+const parseRoll = function(message, rollMessage) {
 	var resultText;
 	var rolls = rollMessage.split(',');
 
@@ -1545,16 +1547,16 @@ const parseRoll = function(channelID, user, rollMessage) {
 
 		switch (selectedGameIndex) {
 			case 0:
-				resultText = standardDice(user, roll.match(regexStdD));
+				resultText = standardDice(message.author.username, roll.match(regexStdD));
 				break;
 			case 1:
-				resultText = dndDice(user, roll.match(regexDND));
+				resultText = dndDice(message.author.username, roll.match(regexDND));
 				break;
 			default:
 				console.log('Unsupported game \'' + selectedGameIndex + '\' selected!');
 		}
 
-		botMessage(channelID, resultText);
+		botMessage(message, resultText);
 	}
 }
 
@@ -1732,25 +1734,22 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
  * ============ MAIN PROCESS ============
  */
 const mainProcess = function() {
-	mybot = new Discord.Client({
-		token: config.token,
-		autorun: true
-	});
+	bot = new Discord.Client();
 
-	mybot.on('message', function(user, userID, channelID, message, event) {
+	bot.on('message', message => {
 		var chatMessage;
 
 		// Is the message a Discord Dice command?
-		if (message.charAt(0) == '!') {
-			chatMessage = parseDiscordDiceCommand(user, channelID, message);
-		} else if (activeChannels.indexOf(channelID) > -1) {
+		if (message.content.charAt(0) == '!') {
+			chatMessage = parseDiscordDiceCommand(message.author.username, message.channel.id, message.content);
+		} else if (activeChannels.indexOf(message.channel.id) > -1) {
 			// Else let regex do its magic.
 
-			var unitConversionMessage = regexConversion.exec(message);
+			var unitConversionMessage = regexConversion.exec(message.content);
 
 			// Only parse for roll messages of a game is selected.
 			if (selectedGameIndex !== -1) {
-				var rollMessage = regexRollMessage.exec(message);
+				var rollMessage = regexRollMessage.exec(message.content);
 			}
 
 			if (unitConversionMessage) {
@@ -1759,31 +1758,33 @@ const mainProcess = function() {
 				/*
 				 * Group 0 is the whole message, index 1 contains the actual roll message(s). Doesn't return anything because there may be multiple rolls.
 				 */
-				parseRoll(channelID, user, rollMessage[1]);
+				parseRoll(message, rollMessage[1]);
 			}
 			// Else, normal chat message.
 		}
 
 		// Will not send anything if the message is undefined or empty.
-		botMessage(channelID, chatMessage);
+		botMessage(message, chatMessage);
 	});
 
-	mybot.on('ready', function() {
-	    console.log("Ready | " + mybot.username + " (" + mybot.id + ")");
-	    
+	bot.on('ready', () => {
+		console.log(`Ready | ${bot.user.tag}!`);
+	  
 		if (selectedGameIndex !== -1) {
 			console.log('Using ' + supportedGamesNames[selectedGameIndex] + ' dice.');
 		}
 	});
 	
-	mybot.on('disconnect', function(msg, code) {
+	bot.on('disconnect', function(msg, code) {
 	    if (code === 0){
 	    	return console.error(msg);
 	    }
 	    
 	    console.log("Discord Dice tried to disconnect.");
-	    mybot.connect();
+	    bot.login(config.token);
 	});
+
+	bot.login(config.token);
 };
 
 if (!fs.existsSync('./config.json')) {
@@ -1809,8 +1810,10 @@ if (config.token === 'YOUR TOKEN') {
 		fs.writeFileSync('./config.json', JSON.stringify({
 			discord : config
 		}).replace(/\r?\n|\r/g, ''));
+		console.log("Configured.");
 		mainProcess();
 	});
 } else {
+	console.log("Configured.");
 	mainProcess();
 }
