@@ -1,21 +1,15 @@
+// FIXME: Refactor all of this spaghetti code.
+
 // Libraries.
-const Discord = require('discord.js');
-const fs = require('fs');
+const Discord = require("discord.js");
+const fs = require("fs");
 
 // Globals.
 var bot;
 var config;
 var activeChannels = [];
-var minMaxBold = '**';
-
-// Unsupported.
-var tracker = {};
-var back = [];
-var forward = [];
-var output = '';
-var currentActors = [];
-var fateMasterDeck = [-4, -3, -2, -3, -2, -1, -2, -1, 0, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -3, -2, -1, -2, -1, 0, -1, 0, 1, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, -2, -1, 0, -1, 0, 1, 0, 1, 2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 0, 1, 2, 1, 2, 3, 2, 3, 4];
-var fateDeck = [];
+var minMaxBold = "**";
+var activeInitiativeSystem = null;
 
 /*
  * Games.
@@ -25,14 +19,15 @@ var fateDeck = [];
 const regexRollMessage = /^\/?r?\s?\(?(.*d\d+.*)\)?$/i;
 const regexModifiers = /([+-]\s?\d*)/gi;
 
+//const regexDND = /^(?!([a-zA-Z\s]+)\s)?([ad]?)\s?(\d*)d(\d+)\s?((?![+-]\d+)?)$/i;
 const regexDND = /^([ad]?)\s?(\d*)d(\d+)\s?([+-].+)*$/i;
 const regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
-// TODO: Eldritch.
 
 const gidxStdd = 0;
 const gidxDnd = 1;
-const supportedGames = ['stdd', 'dnd']
-const supportedGamesNames = ['Standard', 'Dungeons & Dragons'];
+const supportedGames = ["stdd", "dnd"]
+const supportedGamesNames = ["Standard", "Dungeons & Dragons"];
+const supportedInitiativeSystems = ["default", "groups"]
 
 var selectedGameIndex = -1;
 
@@ -43,14 +38,14 @@ const regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)
 const regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
 const regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
 
-const lengthUnitSymbols = ['mm', 'cm', 'm', 'km', 'in', '"', "''", 'ft', "'", 'yd', 'mi'];
+const lengthUnitSymbols = ["mm", "cm", "m", "km", "in", """, """", "ft", """, "yd", "mi"];
 
 const inchInMmeters = 0.0254;
 const footInMeters = 0.3048;
 const yardInMeters = 0.9144;
 const mileInMeters = 1609.344;
 
-const weigthUnitSymbols = ['mg', 'g', 'kg', 'oz', 'lb', 'st'];
+const weigthUnitSymbols = ["mg", "g", "kg", "oz", "lb", "st"];
 
 const ounceInGrams = 28.349523125;
 const poundInGrams = 453.59237;
@@ -59,17 +54,18 @@ const stoneInGrams = 6350.29318;
 /*
  * Bottle spinning.
  */
-const sixteenWindCompassArguments = ['h', '16', 'half'];
-const cardinalCompassArguments = ['c', 'cardinal'];
-const cardinalCompassDirections = ['north', 'east', 'south', 'west'];
-const ordinalCompassDirections = ['north', 'northeast', 'east', 'southeast', 'south', 'southwest', 'west', 'northwest'];
-const sixteenWindDirections = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
+const sixteenWindCompassArguments = ["h", "16", "half"];
+const cardinalCompassArguments = ["c", "cardinal"];
+const cardinalCompassDirections = ["north", "east", "south", "west"];
+const ordinalCompassDirections = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"];
+const sixteenWindDirections = ["north", "north-northeast", "northeast", "east-northeast", "east", "east-southeast", "southeast", "south-southeast", "south", "south-southwest", "southwest", "west-southwest", "west", "west-northwest", "northwest", "north-northwest"];
 
 /*
  * DnD
  */
 
 var recordInitiatives = false;
+var initiativeBonuses = {};
 var initiatives;
 
 /*
@@ -84,8 +80,8 @@ const gamesSupportingInitiatives = [gidxDnd];
 /**
  * Returns true if the bot is enabled on the specified channel.
  */
-const botIsEnabled = function(channelID) {
-	return activeChannels.indexOf(channelID) !== -1;
+const botIsEnabled = function(channel) {
+	return activeChannels.indexOf(channel.id) !== -1;
 }
 
 /**
@@ -95,58 +91,78 @@ const hasGameSelected = function() {
 	return selectedGameIndex !== -1;
 }
 
+const writeConfig = function() {
+	fs.writeFileSync("./config.json", JSON.stringify({
+		"discord": config,
+		"activeChannels": activeChannels,
+		"selectedGameIndex": selectedGameIndex,
+		"initiativeBonuses": initiativeBonuses
+	}).replace(/\r?\n|\r/g, ""));
+}
+
 /**
  * Enables the bot on the specified channel and returns a chat message.
  */
-const enableBot = function(channelID, user) {
-	activeChannels += channelID;
+const enableBot = function(channel, username) {
+	activeChannels += channel.id;
 
-	fs.writeFileSync('./config.json', JSON.stringify({
-		discord : config,
-		activeChannels : activeChannels,
-		selectedGameIndex : selectedGameIndex
-	}).replace(/\r?\n|\r/g, ''));
+	writeConfig();
 
-	console.log(user + ' enabled Discord Dice @ ' + channelID);
-	
-	return 'Discord Dice enabled.';
+	console.log(username + " enabled Discord Dice @ " + channel.id);
+
+	botMessage(channel, "Discord Dice enabled.");
+
+	return null;
 }
+
 
 /**
  * Disables the bot on the specified channel and returns a chat message.
  */
-const disableBot = function(channelID, user) {
+const disableBot = function(channel, username) {
 	var msg = null;
-	
+
 	if (selectedGameIndex !== -1) {
-		msg = 'Stopped playing ' + supportedGamesNames[selectedGameIndex] + " dice.\n";
+		msg = "Stopped playing " + supportedGamesNames[selectedGameIndex] + " dice.\n";
 	}
 
-	msg += 'Discord Dice disabled.';
-	
-	activeChannels = activeChannels.replace(channelID, '');
+	msg += "Discord Dice disabled.";
 
-	fs.writeFileSync('./config.json', JSON.stringify({
-		discord : config,
-		activeChannels : activeChannels,
-		selectedGameIndex : selectedGameIndex
-	}).replace(/\r?\n|\r/g, ''));
-	
-	console.log(user + ' disabled Discord Dice @ ' + channelID);
-	
-	return msg;
+	activeChannels = activeChannels.replace(channel.id, "");
+
+	writeConfig();
+
+	console.log(username + " disabled Discord Dice @ " + channel.id);
+
+	botMessage(channel, msg);
+
+	return null;
 }
 
 /**
- * Uses the bot the send a message to chat.
+ * Reply to the specified message with messageText.
  */
-const botMessage = function(message, messageText) {
-	// Message is not undefined, null, and does not contain only whitespace.
-	if (typeof messageText !== 'undefined' && messageText != null) {
+const botReply = function(message, messageText) {
+	if (typeof messageText !== "undefined" && messageText != null) {
 		if (messageText.length > 2000) {
-			message.reply("Result message too long. Try rolling less or smaller dice.");
+			messageText = "Result message too long. Output truncated: " + messageText
+			message.reply(messageText.substring(0, 2000));
 		} else {
 			message.reply(messageText);
+		}
+	}
+}
+
+/**
+ * Send messageText to the channel message was sent from.
+ */
+const botMessage = function(channel, messageText) {
+	if (typeof messageText !== "undefined" && messageText != null) {
+		if (messageText.length > 2000) {
+			messageText = "Result message too long. Output truncated: " + messageText
+			channel.send(messageText.substring(0, 2000));
+		} else {
+			channel.send(messageText);
 		}
 	}
 }
@@ -163,14 +179,14 @@ const getRandomInt = function(min, max) {
  * list.
  */
 const arrayToString = function(array) {
-	var string = '';
+	var string = "";
 	const length = array.length;
 
 	array.forEach(function(item, idx) {
 		string += item;
 
 		if (idx < length - 1) {
-			string += ', ';
+			string += ", ";
 		}
 	});
 
@@ -182,26 +198,26 @@ const arrayToString = function(array) {
  * comma separated list.
  */
 const toGameList = function(arrayOfGameIndices) {
-	var string = '';
+	var string = "";
 
 	if (arrayOfGameIndices === null) {
 		var length = supportedGames.length;
 
 		supportedGames.forEach(function(code, idx) {
-			string += supportedGamesNames[idx] + ' (' + code + ')';
+			string += supportedGamesNames[idx] + " (" + code + ")";
 
 			if (idx < length - 1) {
-				string += ', ';
+				string += ", ";
 			}
 		});
 	} else{
 		var length = arrayOfGameIndices.length;
 
 		arrayOfGameIndices.forEach(function(gidx, idx) {
-			string += supportedGamesNames[gidx] + ' (' + supportedGames[gidx] + ')';
+			string += supportedGamesNames[gidx] + " (" + supportedGames[gidx] + ")";
 
 			if (idx < length - 1) {
-				string += ', ';
+				string += ", ";
 			}
 		});
 	}
@@ -214,7 +230,7 @@ const toGameList = function(arrayOfGameIndices) {
  * lower case letters.
  */
 const stripWhitespaceToLowerCase = function(str) {
-	return str != null && str.replace(/\s+/g, '').toLowerCase();
+	return str != null && str.replace(/\s+/g, "").toLowerCase();
 }
 
 /**
@@ -236,7 +252,7 @@ const getRandomInts = function(count, minValue, maxValue) {
  * list with the minimum and maximum values bolded.
  */
 const toRollList = function(rollValues, minValue, maxValue) {
-	var string = '';
+	var string = "";
 	const lastIndex = rollValues.length - 1;
 
 	rollValues.forEach(function(val, idx) {
@@ -247,8 +263,8 @@ const toRollList = function(rollValues, minValue, maxValue) {
 		}
 
 		if (idx < lastIndex) {
-			string += ', ';
-		}		
+			string += ", ";
+		}
 	});
 
 	return string;
@@ -412,7 +428,7 @@ const unitConversion = function(inputArray, toUnit) {
 const standardDice = function(user, diceArray) {
 	// TODO: Refactor into a separate function for reuse.
 
-	console.log('Standard Dice: ' + diceArray);
+	console.log("Standard Dice: " + diceArray);
 
 	if (!diceArray) {
 		return null;
@@ -423,7 +439,7 @@ const standardDice = function(user, diceArray) {
 	var diceSize = parseInt(diceArray[2], 10);
 	var intMod = parseInt(diceArray[3], 10);
 
-	var resultText = '';
+	var resultText = "";
 	var total = 0;
 	var diceRoll;
 
@@ -440,8 +456,8 @@ const standardDice = function(user, diceArray) {
 	// Default to +0.
 	intMod = isNaN(intMod) ? 0 : intMod;
 
-	var diceMsg = diceCount + 'd' + diceSize + '' + (intMod === 0 ? '' : (intMod > 0 ? '+' + intMod : intMod))
-	console.log(user + ' rolls: ' + diceMsg);
+	var diceMsg = diceCount + "d" + diceSize + "" + (intMod === 0 ? "" : (intMod > 0 ? "+" + intMod : intMod))
+	console.log(user + " rolls: " + diceMsg);
 
 	while (diceCount > 0) {
 		diceRoll = getRandomInt(1, diceSize);
@@ -458,20 +474,19 @@ const standardDice = function(user, diceArray) {
 		diceCount -= 1;
 
 		if (diceCount > 0) {
-			resultText += ', ';
+			resultText += ", ";
 		}
 	}
 
 	total += intMod;
 
-	return resultText + '\n\t**' + user.toUpperCase() + '** ROLLED  :  ' + diceMsg + ' = [ **' + total + '** ]';
+	return resultText + "\n\t**" + user.toUpperCase() + "** ROLLED  :  " + diceMsg + " = [ **" + total + "** ]";
 };
 
 /*
  * ======== DND DICE ========
  */
 
-// TODO: Name after initiative roll.
 // TODO: Nx rolls to repeat same roll.
 const initiativesSorter = function(a, b) {
 	// Largest first.
@@ -479,17 +494,22 @@ const initiativesSorter = function(a, b) {
 }
 
 const getInitiatives = function() {
-	var output = '**INITIATIVES**\n';
+	var systemMsg = activeInitiativeSystem ? ` (${activeInitiativeSystem})` : "";
+	var output = `**INITIATIVES**${systemMsg}\n`;
 	const length = initiatives.length;
 
-	if (length > 0) {
-		initiatives.sort(initiativesSorter);
+	if (null === activeInitiativeSystem) {
+		if (length > 0) {
+			initiatives.sort(initiativesSorter);
 
-		initiatives.forEach(function(item, idx) {
-			output += item[0] + ': ' + item[1] + "\n";
-		});		
-	} else {
-		output += '–';
+			initiatives.forEach(function(item, idx) {
+				output += item[0] + ": " + item[1] + "\n";
+			});
+		} else {
+			output += "–";
+		}
+	} else if("groups" === activeInitiativeSystem) {
+		console.log(initiatives);
 	}
 
 	return output;
@@ -499,12 +519,19 @@ const dndDice = function(user, diceArray) {
 	if (!diceArray) {
 		return null;
 	}
-
+	//console.log(diceArray);
 	// Index 0 is the whole message.
-	const highLow = diceArray[1].toLowerCase();
+	//const rollLabel = diceArray[1] ? diceArray[1].toLowerCase() : null;
+	const highLow = diceArray[1] ? diceArray[1].toLowerCase() : null;
 	var count = parseInt(diceArray[2], 10);
 	var size = parseInt(diceArray[3], 10);
-	var modStr = undefined === diceArray[4] ? null : diceArray[4];
+	var modStr = undefined === diceArray[4] ? null : diceArray[4] ? diceArray[4] : null;
+
+	//console.log("rollLabel", rollLabel);
+	//console.log("highLow", highLow);
+	//console.log("count", count);
+	//console.log("size", size);
+	//console.log("modStr", modStr);
 
 	// Minimum 1 die.
 	count = isNaN(count) ? 1 : (count < 1 ? 1 : count);
@@ -517,9 +544,9 @@ const dndDice = function(user, diceArray) {
 
 	var minMax;
 
-	if (highLow === 'a') {
+	if (highLow === "a") {
 		minMax = 1;
-	} else if (highLow === 'd') {
+	} else if (highLow === "d") {
 		minMax = -1;
 	} else {
 		minMax = 0;
@@ -533,43 +560,43 @@ const dndDice = function(user, diceArray) {
 	// Resolve initial roll.
 
 	var rollResults = getRandomInts(count, 1, size);
-	var resultText = "Results: " + (count > 100 ? toRollList(rollResults.slice(0, 100), 1, size) + "... (only showing first 100 results)" : toRollList(rollResults, 1, size)) + "\n\t**" + user.toUpperCase() + '** ROLLED ';
+	var resultText = "Results: " + (count > 100 ? toRollList(rollResults.slice(0, 100), 1, size) + "... (only showing first 100 results)" : toRollList(rollResults, 1, size)) + "\n\t**" + user.toUpperCase() + "** ROLLED ";
 	var total = 0;
 
 	if (recordInitiatives) {
-		resultText += 'INITIATIVE ';
+		resultText += "INITIATIVE ";
 	}
 
 	if (minMax === 0) {
 		total = arraySum(rollResults);
 	} else if (minMax > 0) {
 		total = Math.max.apply(null, rollResults);
-		resultText += 'W/ ADV. ';
+		resultText += "W/ ADV. ";
 	} else {
 		total = Math.min.apply(null, rollResults);
-		resultText += 'W/ DISADV. ';
+		resultText += "W/ DISADV. ";
 	}
 
-	resultText += ': `' + highLow + count + 'd' + size;
+	resultText += ": `" + (null === highLow ? "" : highLow) + count + "d" + size;
 
 	// Resolve modifiers.
 
 	if (modStr !== null) {
 		var valString = stripWhitespaceToLowerCase(modStr);
 		var value = intStringArraySum(valString.match(regexModifiers));
-		var sign = value < 0 ? '' : '+'; 
+		var sign = value < 0 ? "" : "+";
 
-		resultText += valString + '` ─> `' + total + sign + value;
+		resultText += valString + "` ─> `" + total + sign + value;
 		total += value
 	}
 
-	resultText += '` = `[ ' + total + ' ]`';
+	resultText += "` = `[ " + total + " ]`";
 
 	if (recordInitiatives) {
 		initiatives.push([total, user]);
 	}
 
-	console.log('\n\t= ' + total);
+	console.log("\n\t= " + total);
 
 	return resultText;
 };
@@ -578,16 +605,16 @@ const dndDice = function(user, diceArray) {
  * =========== BOTTLE SPIN ===========
  */
 const bottleSpin = function(mode) {
-	console.log('Bottle Spin, mode: ' + mode);
+	console.log("Bottle Spin, mode: " + mode);
 
-	var resultText = 'The bottle points ';
+	var resultText = "The bottle points ";
 
-	if (typeof mode === 'undefined') {
-		resultText += ordinalCompassDirections[getRandomInt(0, 7)] + '.';
+	if (mode === null) {
+		resultText += ordinalCompassDirections[getRandomInt(0, 7)] + ".";
 	} else if (sixteenWindCompassArguments.indexOf(mode) > -1) {
-		resultText += sixteenWindDirections[getRandomInt(0, 15)] + '.';
+		resultText += sixteenWindDirections[getRandomInt(0, 15)] + ".";
 	} else if (cardinalCompassArguments.indexOf(mode) > -1) {
-		resultText += cardinalCompassDirections[getRandomInt(0, 3)] + '.';
+		resultText += cardinalCompassDirections[getRandomInt(0, 3)] + ".";
 	} else {
 		resultText = "Invalid bottle spin mode, please use one of the following.\n\tCardinal directions: " + arrayToString(cardinalCompassArguments) + "\n\tCardinal or ordinal directions: *nothing*\n\tSixteen winds directions: " + arrayToString(sixteenWindCompassArguments);
 	}
@@ -599,37 +626,109 @@ const bottleSpin = function(mode) {
  * ========= COIN FLIP =========
  */
 const coinFlip = function(count) {
-	console.log('Coin Flip: ' + count);
+	console.log("Coin Flip: " + count);
 
-	var resultText = 'Coin Flip: ';
+	var resultText = "Coin Flip: ";
 
 	// If count is greater than 1 or NaN.
 	if (Math.abs(count) > 1) {
-		resultText = 'Coin Flips: ';
+		resultText = "Coin Flips: ";
 
 		var headsCount = 0;
 		var tailsCount = 0;
 
 		for (var i = 0; i < count; i++) {
 			if (Math.random() >= 0.5) {
-				resultText += 'H';
+				resultText += "H";
 				headsCount++;
 			} else {
-				resultText += 'T';
+				resultText += "T";
 				tailsCount++;
 			}
 
 			if (i < count - 1) {
-				resultText += ', ';
+				resultText += ", ";
 			}
 		}
 
-		resultText += '\nHeads: ' + headsCount + ' | Tails: ' + tailsCount;
+		resultText += "\nHeads: " + headsCount + " | Tails: " + tailsCount;
 	} else {
-		resultText += Math.random() >= 0.5 ? 'Heads' : 'Tails';
+		resultText += Math.random() >= 0.5 ? "Heads" : "Tails";
 	}
 
 	return resultText;
+}
+
+
+/*
+ * ========= INITIATIVES =========
+ */
+const toggleInitiative = function(system) {
+	var msg = null;
+
+	if (hasGameSelected()) {
+		if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
+			if (recordInitiatives) {
+				msg = getInitiatives();
+				recordInitiatives = false;
+			} else {
+				recordInitiatives = true;
+				initiatives = [];
+
+				if (supportedInitiativeSystems.indexOf(system) > -1) {
+					activeInitiativeSystem = system === "default" ? null : system;
+					systemMsg = system === "default" ? "" : ` Using initiative system "${system}".`;
+				} else {
+					system = ` Unsupported initiative system "${system}", using default instead.`;
+				}
+
+				msg = `All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.${systemMsg}`;
+			}
+		} else {
+			msg = `The currently selected game "${supportedGamesNames[selectedGameIndex]}" does not support initiative rolls.`;
+		}
+	} else {
+		msg = "Please select one of the supported games before using this command: " + toGameList(gamesSupportingInitiatives);
+	}
+
+	return msg;
+}
+
+const recordInitiativeBonus = function(channel, user, tokens) {
+	channelID = channel.id;
+
+	if (tokens.length == 1) {
+		character = user.username;
+		bonus = parseInt(tokens[0]);
+	} else {
+		character = tokens[0];
+		bonus = parseInt(tokens[1]);
+	}
+	console.log(character);
+	console.log(bonus);
+	userID = user.id;
+
+	oldBonus = typeof initiativeBonuses[""+channelID] != "undefined" && typeof initiativeBonuses[""+channelID][""+character] != "undefined" ? initiativeBonuses[""+channelID][""+character] : "";
+
+	if (oldBonus) {
+		oldBonus = ` (Old: ${oldBonus})`;
+		initiativeBonuses[""+channelID][""+character] = bonus;
+	} else {
+		bonusDict = {};
+		bonusDict["" + character] = bonus;
+		initiativeBonuses["" + channelID] = bonusDict;
+	}
+
+	msg = `Recorded initiative bonus "${bonus}" for "${character}".${oldBonus}`;
+
+	console.log("Current bonuses:");
+	console.log(initiativeBonuses);
+
+	writeConfig();
+
+	botMessage(channel, msg);
+
+	return null;
 }
 
 /*
@@ -637,17 +736,17 @@ const coinFlip = function(count) {
  */
 const parseRoll = function(message, rollMessage) {
 	var resultText;
-	var rolls = rollMessage.split(',');
+	var rolls = rollMessage.split(",");
 
 	rolls = null === rolls ? [rollMessage] : rolls;
 
 	const length = rolls.length;
 
-	console.log('rolls: ' + rolls);
+	console.log("rolls: " + rolls);
 
 	for (var i = 0; i < length; i++) {
 		roll = rolls[i].trim();
-		console.log('roll: ' + roll);
+		console.log("roll: " + roll);
 
 		switch (selectedGameIndex) {
 			case 0:
@@ -657,10 +756,10 @@ const parseRoll = function(message, rollMessage) {
 				resultText = dndDice(message.author.username, roll.match(regexDND));
 				break;
 			default:
-				console.log('Unsupported game \'' + selectedGameIndex + '\' selected!');
+				console.log(`Unsupported game "${selectedGameIndex}" selected!`);
 		}
 
-		botMessage(message, resultText);
+		botReply(message, resultText);
 	}
 }
 
@@ -673,7 +772,7 @@ const parseUnitConversion = function(inputString, toUnitSymbol) {
 	// Replace commas with periods for floating point numbers.
 	// Split string by specific symbols.
 	// Capture said symbols.
-	var data = inputString.replace(/\s+/g, '').toLowerCase().replace(',', '\.').split(regexConversionSymbols);
+	var data = inputString.replace(/\s+/g, "").toLowerCase().replace(",", "\.").split(regexConversionSymbols);
 
 	// Remove the last element in the array which is empty.
 	data.splice(data.length - 1, 1);
@@ -685,176 +784,176 @@ const parseUnitConversion = function(inputString, toUnitSymbol) {
  * ==================== DISCORD DICE COMMAND ====================
  */
 
-const parseDiscordDiceCommand = function(user, channelID, message) {
-	var args = message.substring(1).toLowerCase().split(' ');
-	var msg = '';
-	
-	const cmdBolding = function() {
-		msg = 'Disabled bolding ones and maximum dice results.';
+const parseDiscordDiceCommand = function(message) {
+	const cmdToggleBolding = function(channel) {
+		msg = "Disabled bolding ones and maximum dice results.";
 
-		if ('**' === minMaxBold) {
-			minMaxBold = '';
+		if ("**" === minMaxBold) {
+			minMaxBold = "";
 		} else {
-			msg = 'Enabled bolding ones and maximum dice results.';
-			minMaxBold = '**';
+			msg = "Enabled bolding ones and maximum dice results.";
+			minMaxBold = "**";
 		}
-		
-		return msg
+
+		botMessage(channel, msg);
+
+		return null;
 	}
 
-	const cmdChangeGame = function(args) {
-		if (args.length > 1) {
-			if (supportedGames.indexOf(args[1]) > -1) {
-				selectedGameIndex = supportedGames.indexOf(args[1]);
-					
-				fs.writeFileSync('./config.json', JSON.stringify({
-					discord : config,
-					activeChannels : activeChannels,
-					selectedGameIndex : selectedGameIndex
-				}).replace(/\r?\n|\r/g, ''));
-				
-				msg = 'Using ' + supportedGamesNames[selectedGameIndex] + ' dice.';
-					
+	const cmdChangeGame = function(channel, tokens) {
+		if (tokens.length > 0) {
+			game = tokens[0].toLowerCase();
+
+			if (supportedGames.indexOf(game) > -1) {
+				channelID = channel.id;
+				selectedGameIndex = supportedGames.indexOf(game);
+
+				writeConfig();
+
+				msg = `Using ${supportedGamesNames[selectedGameIndex]} dice.`;
+
 				if (activeChannels.indexOf(channelID) === -1) {
 					activeChannels += channelID;
-					console.log(user + ' enabled Discord Dice @ ' + channelID);
+					console.log(user + " enabled Discord Dice @ " + channelID);
 				}
-	
+
 				console.log(msg);
 			} else {
-				msg = 'Unknown game \'' + args[1] + '\'.';
+				msg = `Unknown game "${game}".`;
 			}
 		} else {
-			msg = 'Please specify one of the supported games: ' + toGameList(null);
+			msg = "Please specify one of the supported games: " + toGameList(null);
 		}
-		
-		return msg;
+
+		botMessage(channel, msg);
+
+		return null;
 	}
 
-	const cmdCoinFlip = function(args) {
+	const cmdCoinFlip = function(tokens) {
 		var count = 1;
-		
-		if (args.length > 1) {
-			count = parseInt(args[1]);
-	
+
+		if (args.length > 0) {
+			count = parseInt(tokens[0]);
+
 			// Limit to 1.
 			count = count < 1 ? 1 : count;
-	
+
 			// Limit to 100.
 			count = count > 100 ? 100 : count;
 		}
-	
+
 		return coinFlip(count);
 	}
 
-	const cmdInitiativeToggle = function() {
-		if (hasGameSelected()) {
-			if (gamesSupportingInitiatives.indexOf(selectedGameIndex) > -1) {
-				if (recordInitiatives) {
-					msg = getInitiatives();
-					recordInitiatives = false;
-				} else {
-					recordInitiatives = true;
-					initiatives = [];
-					msg = 'All rolls from now on will be recorded as initiatives. Use the initiative command again to print the list of initiatives and stop recording rolls.';
-				}
-			} else {
-				msg = 'The currently selected game (' + supportedGamesNames[selectedGameIndex] + ') does not support initiative rolls.';
-			}
-		} else {
-			msg = 'Please select one of the supported games before using this command: ' + toGameList(gamesSupportingInitiatives);
-		}
-		
-		return msg;
+	const cmdBottleSpin = function(tokens) {
+		return bottleSpin(tokens[0] ? tokens[0].toLowerCase() : null);
 	}
 
-	if (botIsEnabled(channelID)) {
-		switch (args[0]) {
-			case 'dd':
-			case 'ddice':
-			case 'discorddice':
-				msg = disableBot(channelID, user);
+	const cmdInitiativeToggle = function(channel, tokens) {
+		system = (tokens[0] || "default").toLowerCase();
+
+		msg = toggleInitiative(system);
+
+		botMessage(channel, msg);
+
+		return null;
+	}
+
+
+	var args = message.content.substring(1).split(" ");
+	var username = message.author.username;
+	var channel = message.channel;
+	var command = args[0];
+	var tokens = args.slice(1);
+	var msg = "";
+
+	if (botIsEnabled(channel)) {
+		switch (command) {
+			case "dd":
+			case "ddice":
+			case "discorddice":
+				msg = disableBot(channel, username);
 				break;
-	
-			case 'don':
-			case 'dice':
-			case 'diceon':
-			case 'startdice':
-				msg = 'Discord Dice is already enabled.';
+
+			case "don":
+			case "dice":
+			case "diceon":
+			case "startdice":
+				msg = "Discord Dice is already enabled.";
 				break;
-	
-			case 'doff':
-			case 'nodice':
-			case 'diceoff':
-			case 'stopdice':
-				msg = disableBot(channelID, user);
+
+			case "doff":
+			case "nodice":
+			case "diceoff":
+			case "stopdice":
+				msg = disableBot(channel, username);
 				break;
-	
-			case 'bold':
-			case 'bolds':
-			case 'bolding':
-				msg = cmdBolding()
+
+			case "bold":
+			case "bolds":
+			case "bolding":
+				msg = cmdToggleBolding(channel)
 				break;
-	
-			case 'g':
-			case 'game':
-				msg = cmdChangeGame(args);
+
+			case "g":
+			case "game":
+				msg = cmdChangeGame(channel, tokens);
 				break;
-		
-			case 'cf':
-			case 'fc':
-			case 'coin':
-			case 'flip':
-			case 'coinflip':
-			case 'flipcoin':
-				msg = cmdCoinFlip(args);
+
+			case "cf":
+			case "fc":
+			case "coin":
+			case "flip":
+			case "coinflip":
+			case "flipcoin":
+				msg = cmdCoinFlip(tokens);
 				break;
-		
-			case 'bs':
-			case 'sb':
-			case 'bottle':
-			case 'spin':
-			case 'bottlespin':
-			case 'spinbottle':
-				msg = bottleSpin(args[1]);
+
+			case "bs":
+			case "sb":
+			case "bottle":
+			case "spin":
+			case "bottlespin":
+			case "spinbottle":
+				msg = cmdBottleSpin(tokens);
 				break;
-		
-			case 'i':
-			case 'in':
-			case 'it':
-			case 'ini':
-			case 'init':
-			case 'initiative':
-				msg = cmdInitiativeToggle(args);
+
+			case "i":
+			case "in":
+			case "it":
+			case "ini":
+			case "init":
+			case "initiative":
+				msg = cmdInitiativeToggle(channel, tokens);
 				break;
-		
+
+			case "initb":
+			case "initbonus":
+				msg = recordInitiativeBonus(channel, message.author, tokens);
+				break;
+
+
 			default:
-				msg = 'Unknown command \'' + args[0] + '\'.';
+				msg = `Unknown command "${command}".`;
 			}
 		} else {
-			switch (args[0]) {
-				case 'dd':
-				case 'ddice':
-				case 'discorddice':
-					msg = enableBot(channelID, user);
+			switch (command) {
+				case "dd":
+				case "ddice":
+				case "discorddice":
+					msg = enableBot(channel, username);
 					break;
-		
-				case 'don':
-				case 'dice':
-				case 'diceon':
-				case 'startdice':
-					msg = enableBot(channelID, user);
-					break;
-		
-				case 'doff':
-				case 'nodice':
-				case 'diceoff':
-				case 'stopdice':
-					msg = 'Discord Dice is already disabled.';
+
+				case "don":
+				case "dice":
+				case "diceon":
+				case "startdice":
+					msg = enableBot(channel, username);
 					break;
 
 				default:
-					msg = 'Unknown command \'' + args[0] + '\'.';
+					msg = `Discord Dice is disabled. Only the enable command is accepted. (!dd or !don)`;
 			}
 		}
 
@@ -867,12 +966,12 @@ const parseDiscordDiceCommand = function(user, channelID, message) {
 const mainProcess = function() {
 	bot = new Discord.Client();
 
-	bot.on('message', message => {
+	bot.on("message", message => {
 		var chatMessage;
 
 		// Is the message a Discord Dice command?
-		if (message.content.charAt(0) == '!') {
-			chatMessage = parseDiscordDiceCommand(message.author.username, message.channel.id, message.content);
+		if (message.content.charAt(0) == "!") {
+			chatMessage = parseDiscordDiceCommand(message);
 		} else if (activeChannels.indexOf(message.channel.id) > -1) {
 			// Else let regex do its magic.
 
@@ -897,22 +996,22 @@ const mainProcess = function() {
 		}
 
 		// Will not send anything if the message is undefined or empty.
-		botMessage(message, chatMessage);
+		botReply(message, chatMessage);
 	});
 
-	bot.on('ready', () => {
+	bot.on("ready", () => {
 		console.log(`Ready | ${bot.user.tag}!`);
-	  
+
 		if (selectedGameIndex !== -1) {
-			console.log('Using ' + supportedGamesNames[selectedGameIndex] + ' dice.');
+			console.log(`Using ${supportedGamesNames[selectedGameIndex]} dice.`);
 		}
 	});
-	
-	bot.on('disconnect', function(msg, code) {
+
+	bot.on("disconnect", function(msg, code) {
 	    if (code === 0){
 	    	return console.error(msg);
 	    }
-	    
+
 	    console.log("Discord Dice tried to disconnect.");
 	    bot.login(config.token);
 	});
@@ -920,33 +1019,34 @@ const mainProcess = function() {
 	bot.login(config.token);
 };
 
-if (!fs.existsSync('./config.json')) {
-	fs.writeFileSync('./config.json', JSON.stringify({
+if (!fs.existsSync("./config.json")) {
+	fs.writeFileSync("./config.json", JSON.stringify({
 		discord: {
-			token: 'YOUR TOKEN'
+			token: "YOUR TOKEN"
 		}
-	}).replace(/\r?\n|\r/g, ''));
+	}).replace(/\r?\n|\r/g, ""));
 }
 
-config = require('./config.json').discord;
-activeChannels = require('./config.json').activeChannels || '';
-selectedGameIndex = require('./config.json').selectedGameIndex;
+config = require("./config.json").discord;
+activeChannels = require("./config.json").activeChannels || "";
+selectedGameIndex = require("./config.json").selectedGameIndex;
 selectedGameIndex = isNaN(selectedGameIndex) ? -1 : selectedGameIndex;
 
-if (config.token === 'YOUR TOKEN') {
+if (config.token === "YOUR TOKEN") {
 	var pw = true;
 	process.stdin.resume();
-	process.stdin.setEncoding('utf8');
-	console.log('Enter your Discord Bot Token: ');
-	process.stdin.on('data', function(token) {
-		config.token = token.replace(/\r?\n|\r/g, '');
-		fs.writeFileSync('./config.json', JSON.stringify({
+	process.stdin.setEncoding("utf8");
+	console.log("Enter your Discord Bot Token: ");
+	process.stdin.on("data", function(token) {
+		config.token = token.replace(/\r?\n|\r/g, "");
+
+		fs.writeFileSync("./config.json", JSON.stringify({
 			discord : config
-		}).replace(/\r?\n|\r/g, ''));
+		}).replace(/\r?\n|\r/g, ""));
+
 		console.log("Configured.");
 		mainProcess();
 	});
 } else {
-	console.log("Configured.");
 	mainProcess();
 }
