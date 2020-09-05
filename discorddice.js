@@ -25,9 +25,9 @@ const regexStdD = /^(\d+)?d(\d+)\s?([+-]\d+)?$/i;
 
 const gidxStdd = 0;
 const gidxDnd = 1;
-const supportedGames = ["stdd", "dnd"]
+const supportedGames = ["stdd", "dnd"];
 const supportedGamesNames = ["Standard", "Dungeons & Dragons"];
-const supportedInitiativeSystems = ["default", "groups"]
+const supportedInitiativeSystems = ["default", "groups"];
 
 var selectedGameIndex = -1;
 
@@ -38,7 +38,7 @@ const regexConversionSymbols = /(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)
 const regexConversion = /^\/?c?\s?\(?(.*\d+\s?(?:mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st))\s?(?:to|in|as|>|=)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\)?$/i;
 const regexValueSymbols = /(?:(\d*(?:,|\.)?\d+)\s?(mm|cm|m|km|in|"|''|ft|'|yd|mi|mg|g|kg|oz|lb|st)\s?)+$/i;
 
-const lengthUnitSymbols = ["mm", "cm", "m", "km", "in", """, """", "ft", """, "yd", "mi"];
+const lengthUnitSymbols = ["mm", "cm", "m", "km", "in", '"', "ft", "'", "yd", "mi"];
 
 const inchInMmeters = 0.0254;
 const footInMeters = 0.3048;
@@ -82,14 +82,14 @@ const gamesSupportingInitiatives = [gidxDnd];
  */
 const botIsEnabled = function(channel) {
 	return activeChannels.indexOf(channel.id) !== -1;
-}
+};
 
 /**
  * Returns true if a game has been selected.
  */
 const hasGameSelected = function() {
 	return selectedGameIndex !== -1;
-}
+};
 
 const writeConfig = function() {
 	fs.writeFileSync("./config.json", JSON.stringify({
@@ -98,7 +98,7 @@ const writeConfig = function() {
 		"selectedGameIndex": selectedGameIndex,
 		"initiativeBonuses": initiativeBonuses
 	}).replace(/\r?\n|\r/g, ""));
-}
+};
 
 /**
  * Enables the bot on the specified channel and returns a chat message.
@@ -113,7 +113,7 @@ const enableBot = function(channel, username) {
 	botMessage(channel, "Discord Dice enabled.");
 
 	return null;
-}
+};
 
 
 /**
@@ -137,7 +137,7 @@ const disableBot = function(channel, username) {
 	botMessage(channel, msg);
 
 	return null;
-}
+};
 
 /**
  * Reply to the specified message with messageText.
@@ -145,13 +145,13 @@ const disableBot = function(channel, username) {
 const botReply = function(message, messageText) {
 	if (typeof messageText !== "undefined" && messageText != null) {
 		if (messageText.length > 2000) {
-			messageText = "Result message too long. Output truncated: " + messageText
+			messageText = "Result message too long. Output truncated: " + messageText;
 			message.reply(messageText.substring(0, 2000));
 		} else {
 			message.reply(messageText);
 		}
 	}
-}
+};
 
 /**
  * Send messageText to the channel message was sent from.
@@ -159,20 +159,20 @@ const botReply = function(message, messageText) {
 const botMessage = function(channel, messageText) {
 	if (typeof messageText !== "undefined" && messageText != null) {
 		if (messageText.length > 2000) {
-			messageText = "Result message too long. Output truncated: " + messageText
+			messageText = "Result message too long. Output truncated: " + messageText;
 			channel.send(messageText.substring(0, 2000));
 		} else {
 			channel.send(messageText);
 		}
 	}
-}
+};
 
 /**
  * Returns a random integer in range [min, max].
  */
 const getRandomInt = function(min, max) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+};
 
 /**
  * Returns a string containing the elements of the array in a comma separated
@@ -191,7 +191,7 @@ const arrayToString = function(array) {
 	});
 
 	return string;
-}
+};
 
 /**
  * Returns a string containing the names and codes of the specified games in a
@@ -199,9 +199,10 @@ const arrayToString = function(array) {
  */
 const toGameList = function(arrayOfGameIndices) {
 	var string = "";
+	var length = 0;
 
 	if (arrayOfGameIndices === null) {
-		var length = supportedGames.length;
+		length = supportedGames.length;
 
 		supportedGames.forEach(function(code, idx) {
 			string += supportedGamesNames[idx] + " (" + code + ")";
@@ -211,7 +212,7 @@ const toGameList = function(arrayOfGameIndices) {
 			}
 		});
 	} else{
-		var length = arrayOfGameIndices.length;
+		length = arrayOfGameIndices.length;
 
 		arrayOfGameIndices.forEach(function(gidx, idx) {
 			string += supportedGamesNames[gidx] + " (" + supportedGames[gidx] + ")";
@@ -223,7 +224,7 @@ const toGameList = function(arrayOfGameIndices) {
 	}
 
 	return string;
-}
+};
 
 /**
  * Returns the specified string without any whitespace characters and in all
@@ -231,7 +232,7 @@ const toGameList = function(arrayOfGameIndices) {
  */
 const stripWhitespaceToLowerCase = function(str) {
 	return str != null && str.replace(/\s+/g, "").toLowerCase();
-}
+};
 
 /**
  * Returns the specified number of random integers generated in the inclusive
@@ -245,7 +246,7 @@ const getRandomInts = function(count, minValue, maxValue) {
 	}
 
 	return values;
-}
+};
 
 /**
  * Returns a string containing the specified roll values in a comma separated
@@ -268,7 +269,7 @@ const toRollList = function(rollValues, minValue, maxValue) {
 	});
 
 	return string;
-}
+};
 
 /**
  * Returns the sum of all values in a numeric array.
@@ -345,7 +346,7 @@ const toFromMeters = function(value, unit, toMeters) {
 		default:
 			return num;
 	}
-}
+};
 
 const toFromGrams = function(value, unit, toGrams) {
 	const num = parseFloat(value);
@@ -381,7 +382,7 @@ const toFromGrams = function(value, unit, toGrams) {
 		default:
 			return num;
 	}
-}
+};
 
 const unitConversion = function(inputArray, toUnit) {
 	console.log("Unit Conversion: " + inputArray);
@@ -420,7 +421,7 @@ const unitConversion = function(inputArray, toUnit) {
 	console.log("\t= " + result + " " + toUnit);
 
 	return outputText + " = " + result.toFixed(2) + " " + toUnit;
-}
+};
 
 /*
  * ============= STANDARD DICE =============
@@ -456,7 +457,7 @@ const standardDice = function(user, diceArray) {
 	// Default to +0.
 	intMod = isNaN(intMod) ? 0 : intMod;
 
-	var diceMsg = diceCount + "d" + diceSize + "" + (intMod === 0 ? "" : (intMod > 0 ? "+" + intMod : intMod))
+	var diceMsg = diceCount + "d" + diceSize + "" + (intMod === 0 ? "" : (intMod > 0 ? "+" + intMod : intMod));
 	console.log(user + " rolls: " + diceMsg);
 
 	while (diceCount > 0) {
@@ -491,7 +492,7 @@ const standardDice = function(user, diceArray) {
 const initiativesSorter = function(a, b) {
 	// Largest first.
 	return b[0] - a[0]
-}
+};
 
 const getInitiatives = function() {
 	var systemMsg = activeInitiativeSystem ? ` (${activeInitiativeSystem})` : "";
@@ -513,7 +514,7 @@ const getInitiatives = function() {
 	}
 
 	return output;
-}
+};
 
 const dndDice = function(user, diceArray) {
 	if (!diceArray) {
@@ -620,7 +621,7 @@ const bottleSpin = function(mode) {
 	}
 
 	return resultText;
-}
+};
 
 /*
  * ========= COIN FLIP =========
@@ -657,7 +658,7 @@ const coinFlip = function(count) {
 	}
 
 	return resultText;
-}
+};
 
 
 /*
@@ -692,7 +693,7 @@ const toggleInitiative = function(system) {
 	}
 
 	return msg;
-}
+};
 
 const recordInitiativeBonus = function(channel, user, tokens) {
 	channelID = channel.id;
@@ -729,7 +730,7 @@ const recordInitiativeBonus = function(channel, user, tokens) {
 	botMessage(channel, msg);
 
 	return null;
-}
+};
 
 /*
  * ========== PARSE ROLL ==========
@@ -761,7 +762,7 @@ const parseRoll = function(message, rollMessage) {
 
 		botReply(message, resultText);
 	}
-}
+};
 
 /*
  * ===================== PARSE UNIT CONVERSION =====================
@@ -798,7 +799,7 @@ const parseDiscordDiceCommand = function(message) {
 		botMessage(channel, msg);
 
 		return null;
-	}
+	};
 
 	const cmdChangeGame = function(channel, tokens) {
 		if (tokens.length > 0) {
@@ -828,7 +829,7 @@ const parseDiscordDiceCommand = function(message) {
 		botMessage(channel, msg);
 
 		return null;
-	}
+	};
 
 	const cmdCoinFlip = function(tokens) {
 		var count = 1;
@@ -844,11 +845,11 @@ const parseDiscordDiceCommand = function(message) {
 		}
 
 		return coinFlip(count);
-	}
+	};
 
 	const cmdBottleSpin = function(tokens) {
 		return bottleSpin(tokens[0] ? tokens[0].toLowerCase() : null);
-	}
+	};
 
 	const cmdInitiativeToggle = function(channel, tokens) {
 		system = (tokens[0] || "default").toLowerCase();
@@ -858,7 +859,7 @@ const parseDiscordDiceCommand = function(message) {
 		botMessage(channel, msg);
 
 		return null;
-	}
+	};
 
 
 	var args = message.content.substring(1).split(" ");
@@ -893,7 +894,7 @@ const parseDiscordDiceCommand = function(message) {
 			case "bold":
 			case "bolds":
 			case "bolding":
-				msg = cmdToggleBolding(channel)
+				msg = cmdToggleBolding(channel);
 				break;
 
 			case "g":
@@ -958,7 +959,7 @@ const parseDiscordDiceCommand = function(message) {
 		}
 
 	return msg;
-}
+};
 
 /*
  * ============ MAIN PROCESS ============
