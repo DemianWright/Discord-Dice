@@ -1,4 +1,6 @@
 /.settings/
+/node_modules/
+/nodejs/
 /.project
 .idea
 config.json

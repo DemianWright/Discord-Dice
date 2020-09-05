@@ -1,0 +1,29 @@
+{
+  "name": "discord-dice",
+  "version": "2.0.0",
+  "description": "Discord dice roller.",
+  "main": "discorddice.js",
+  "dependencies": {
+    "bufferutil": "^4.0.1",
+    "discord.js": "^12.2.0",
+    "utf-8-validate": "^5.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DemianWright/Discord-Dice.git"
+  },
+  "keywords": [
+    "discord",
+    "dice"
+  ],
+  "author": "Demian Wright, Glen Blosser",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DemianWright/Discord-Dice/issues"
+  },
+  "homepage": "https://github.com/DemianWright/Discord-Dice#readme"
+}
